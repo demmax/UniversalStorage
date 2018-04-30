@@ -8,6 +8,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 find_package(Threads REQUIRED)
 find_package(GTest REQUIRED)
 find_package(GMock REQUIRED)
+find_package(Boost 1.60 REQUIRED)
 
 enable_testing()
 
