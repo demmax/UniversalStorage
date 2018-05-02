@@ -11,7 +11,7 @@
 
 StorageAccessor makeSimpleAccessor()
 {
-    IPhysicalStoragePtr storage = std::make_shared<NaivePhysicalStorage>();
+    IStoragePtr storage = std::make_shared<NaivePhysicalStorage>();
     StorageAccessor accessor;
     accessor.mountPhysicalVolume(storage, "/", 1);
     return std::move(accessor);
@@ -58,6 +58,15 @@ TEST(SimpleStringSetGetCheck, StorageAccessorFunctionality)
     EXPECT_EQ(accessor.getValue<decltype(val)>(path), val);
 }
 
+TEST(SimpleNonAsciiStringSetGetCheck, StorageAccessorFunctionality)
+{
+    auto path = "/1";
+    auto accessor = makeSimpleAccessor();
+    std::string val{"Частично-двухбайтная строка с ё."};
+    accessor.setValue(path, val);
+    EXPECT_EQ(accessor.getValue<decltype(val)>(path), val);
+}
+
 
 TEST(SimpleVectorSetGetCheck, StorageAccessorFunctionality)
 {
@@ -66,4 +75,10 @@ TEST(SimpleVectorSetGetCheck, StorageAccessorFunctionality)
     std::vector<uint8_t> data { 1, 2, 3, 4, 0 };
     accessor.setValue(path, data);
     EXPECT_EQ(accessor.getValue<decltype(data)>(path), data);
+}
+
+
+TEST(SelectRightStorage, PhysicalVolumeSelector)
+{
+
 }

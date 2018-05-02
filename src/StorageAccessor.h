@@ -8,7 +8,7 @@
 
 #include <vector>
 #include <boost/endian/conversion.hpp>
-#include "IPhysicalStorage.h"
+#include "IStorage.h"
 
 class StorageAccessor
 {
@@ -21,14 +21,15 @@ public:
 
     void removeKey(const std::string &path);
 
-    int mountPhysicalVolume(IPhysicalStoragePtr storage,
+    int mountPhysicalVolume(IStoragePtr storage,
                             const std::string &mount_point, int priority, const std::string &path = "/");
 
 
 protected:
-    std::string getFullPhysicalPath(IPhysicalStoragePtr storage, const std::string &rel_path) const;
+    IStoragePtr getForegroundPhysicalStorage(const std::string &path) const;
+    std::string getFullPhysicalPath(IStoragePtr storage, const std::string &rel_path) const;
 
-    IPhysicalStoragePtr m_storage;
+    IStoragePtr m_storage;
 };
 
 

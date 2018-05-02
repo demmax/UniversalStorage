@@ -6,12 +6,13 @@
 #define UNIVERSALSTORAGE_MOCKPHYSICALSTORAGE_H
 
 
-#include "IPhysicalStorage.h"
-#include "../../src/IPhysicalStorage.h"
+#include "../../src/IStorage.h"
+#include "../../src/IStorage.h"
 #include <gmock/gmock.h>
+#include <string>
 
 
-class MockPhysicalStorage : public IPhysicalStorage
+class MockPhysicalStorage : public IStorage
 {
 public:
     MOCK_METHOD3(setValue, void(const std::string &path, const uint8_t *data, size_t s));

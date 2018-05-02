@@ -2,8 +2,8 @@
 // Created by maxon on 29.04.18.
 //
 
-#ifndef UNIVERSALSTORAGE_IPHYSICALSTORAGE_H
-#define UNIVERSALSTORAGE_IPHYSICALSTORAGE_H
+#ifndef UNIVERSALSTORAGE_ISTORAGE_H
+#define UNIVERSALSTORAGE_ISTORAGE_H
 
 #include <any>
 #include <memory>
@@ -11,17 +11,17 @@
 #include <vector>
 
 
-class IPhysicalStorage
+class IStorage
 {
 public:
     virtual void setValue(const std::string &path, const uint8_t* data, size_t size) = 0;
     virtual std::tuple<uint8_t*, size_t> getValue(const std::string &path) const = 0;
     virtual bool isExist(const std::string &path) const = 0;
-    virtual ~IPhysicalStorage() = default;
+    virtual ~IStorage() = default;
 };
 
 
-using IPhysicalStoragePtr = std::shared_ptr<IPhysicalStorage>;
+using IStoragePtr = std::shared_ptr<IStorage>;
 
 
-#endif //UNIVERSALSTORAGE_IPHYSICALSTORAGE_H
+#endif // UNIVERSALSTORAGE_ISTORAGE_H

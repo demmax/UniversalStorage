@@ -5,13 +5,13 @@
 #ifndef UNIVERSALSTORAGE_NAIVEPHYSICALSTORAGE_H
 #define UNIVERSALSTORAGE_NAIVEPHYSICALSTORAGE_H
 
-#include "IPhysicalStorage.h"
+#include "../../src/IStorage.h"
 
 #include <unordered_map>
 #include <vector>
 
 
-class NaivePhysicalStorage : public IPhysicalStorage
+class NaivePhysicalStorage : public IStorage
 {
 public:
     void setValue(const std::string &path, const uint8_t* data, size_t size) override;
