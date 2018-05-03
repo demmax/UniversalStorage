@@ -14,9 +14,9 @@ MountPointTree::MountPointTree()
 }
 
 
-void MountPointTree::addMountPoint(const std::string &path, IStoragePtr storage, uint32_t priority)
+void MountPointTree::addMountPoint(const std::string &mount_path, IStoragePtr storage, const std::string &real_path, uint32_t priority)
 {
-    PathView view(path);
+    PathView view(mount_path);
     MountPointTreeNode* current = m_root.get();
     std::string_view path_part = view.begin();
 
@@ -34,7 +34,7 @@ void MountPointTree::addMountPoint(const std::string &path, IStoragePtr storage,
         }
     }
 
-    current->storage_vector.emplace_back(storage, priority);
+    current->storage_vector.emplace_back(storage, real_path, priority);
 }
 
 std::set<MountPoint> MountPointTree::getSuitableStorageList(const std::string &path) const

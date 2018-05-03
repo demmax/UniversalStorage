@@ -15,8 +15,8 @@
 class MockPhysicalStorage : public IStorage
 {
 public:
-    MOCK_METHOD3(setValue, void(const std::string &path, const uint8_t *data, size_t s));
-    MOCK_CONST_METHOD1(getValue, std::tuple<uint8_t*, size_t>(const std::string &path));
+    MOCK_METHOD2(setValue, void(const std::string &path, const std::vector<uint8_t> &data));
+    MOCK_CONST_METHOD1(getValue, std::vector<uint8_t>(const std::string &path));
     MOCK_CONST_METHOD1(isExist, bool(const std::string &path));
 };
 

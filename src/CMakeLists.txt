@@ -1,5 +1,5 @@
 set(SOURCES StorageAccessor.cpp DataSerializer.hpp MountPointTree.cpp MountPointTree.h)
-set(HEADERS StorageAccessor.h IStorage.h exceptions.h PathView.cpp PathView.h)
+set(HEADERS StorageAccessor.h IStorage.h exceptions.h PathView.cpp PathView.h NaiveStorage.cpp NaiveStorage.h)
 
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})

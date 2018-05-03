@@ -14,8 +14,8 @@
 class IStorage
 {
 public:
-    virtual void setValue(const std::string &path, const uint8_t* data, size_t size) = 0;
-    virtual std::tuple<uint8_t*, size_t> getValue(const std::string &path) const = 0;
+    virtual void setValue(const std::string &path, const std::vector<uint8_t> &data) = 0;
+    virtual std::vector<uint8_t> getValue(const std::string &path) const = 0;
     virtual bool isExist(const std::string &path) const = 0;
     virtual ~IStorage() = default;
 };

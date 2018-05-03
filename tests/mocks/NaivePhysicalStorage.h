@@ -14,10 +14,10 @@
 class NaivePhysicalStorage : public IStorage
 {
 public:
-    void setValue(const std::string &path, const uint8_t* data, size_t size) override;
-    std::tuple<uint8_t*, size_t> getValue(const std::string &path) const override;
+    std::vector<uint8_t> getValue(const std::string &path) const override;
+    void setValue(const std::string &path, const std::vector<uint8_t> &data) override;
     bool isExist(const std::string &path) const override;
-    ~NaivePhysicalStorage() {}
+    ~NaivePhysicalStorage() override = default;
 
 protected:
     std::unordered_map<std::string, std::vector<uint8_t>> m_dataMap;

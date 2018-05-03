@@ -11,7 +11,7 @@ TEST(MountPointTreeRootCase, MountPointTreeTest)
     MountPointTree tree;
     std::shared_ptr storage = std::make_shared<MockPhysicalStorage>();
     uint32_t priority = 42;
-    tree.addMountPoint("/", storage, priority);
+    tree.addMountPoint("/", storage, "/", priority);
 
     auto storages = tree.getSuitableStorageList("/");
     EXPECT_EQ(storages.size(), 1);
@@ -26,8 +26,8 @@ TEST(MountPointTreeNotRootCase, MountPointTreeTest)
     MountPointTree tree;
     std::shared_ptr storage = std::make_shared<MockPhysicalStorage>();
     uint32_t priority = 42;
-    std::string path = {"/a/b/c"};
-    tree.addMountPoint(path, storage, priority);
+    std::string path = "/a/b/c";
+    tree.addMountPoint(path, storage, "/", priority);
 
     auto storages = tree.getSuitableStorageList(path);
     EXPECT_EQ(storages.size(), 1);
@@ -47,13 +47,13 @@ TEST(MountPointTreeSuitableTwoOfThreeCase, MountPointTreeTest)
     uint32_t priority2 = 42;
     uint32_t priority3 = 43;
 
-    std::string path1 = {"/a/b"};
-    std::string path2 = {"/a/b/d/h"};
-    std::string path3 = {"/a/g/c"};
+    std::string path1 = "/a/b";
+    std::string path2 = "/a/b/d/h";
+    std::string path3 = "/a/g/c";
 
-    tree.addMountPoint(path1, storage1, priority1);
-    tree.addMountPoint(path2, storage2, priority2);
-    tree.addMountPoint(path3, storage3, priority3);
+    tree.addMountPoint(path1, storage1, "/", priority1);
+    tree.addMountPoint(path2, storage2, "/", priority2);
+    tree.addMountPoint(path3, storage3, "/", priority3);
 
     auto storages = tree.getSuitableStorageList(path2);
     EXPECT_EQ(storages.size(), 2);
@@ -80,15 +80,15 @@ TEST(MountPointTreeRemovingStorageCase, MountPointTreeTest)
     uint32_t priority3 = 43;
     uint32_t priority4 = 33;
 
-    std::string path1 = {"/a/b"};
-    std::string path2 = {"/a/b/d/h"};
-    std::string path3 = {"/a/g/c"};
-    std::string path4 = {"/a/b/d"};
+    std::string path1 = "/a/b";
+    std::string path2 = "/a/b/d/h";
+    std::string path3 = "/a/g/c";
+    std::string path4 = "/a/b/d";
 
-    tree.addMountPoint(path1, storage1, priority1);
-    tree.addMountPoint(path2, storage2, priority2);
-    tree.addMountPoint(path3, storage3, priority3);
-    tree.addMountPoint(path4, storage4, priority4);
+    tree.addMountPoint(path1, storage1, "/", priority1);
+    tree.addMountPoint(path2, storage2, "/", priority2);
+    tree.addMountPoint(path3, storage3, "/", priority3);
+    tree.addMountPoint(path4, storage4, "/", priority4);
 
     tree.removeMountPoint(storage2);
 
@@ -116,15 +116,15 @@ TEST(MountPointOneStorageFewPlacesCase, MountPointTreeTest)
     uint32_t priority3 = 43;
     uint32_t priority4 = 46;
 
-    std::string path1 = {"/a/b"};
-    std::string path2 = {"/a/b/d/h"};
-    std::string path3 = {"/a/g/c"};
-    std::string path4 = {"/a"};
+    std::string path1 = "/a/b";
+    std::string path2 = "/a/b/d/h";
+    std::string path3 = "/a/g/c";
+    std::string path4 = "/a";
 
-    tree.addMountPoint(path1, storage1, priority1);
-    tree.addMountPoint(path2, storage2, priority2);
-    tree.addMountPoint(path3, storage3, priority3);
-    tree.addMountPoint(path4, storage2, priority4);
+    tree.addMountPoint(path1, storage1, "/", priority1);
+    tree.addMountPoint(path2, storage2, "/", priority2);
+    tree.addMountPoint(path3, storage3, "/", priority3);
+    tree.addMountPoint(path4, storage2, "/", priority4);
 
     tree.removeMountPoint(storage2);
 
@@ -134,3 +134,4 @@ TEST(MountPointOneStorageFewPlacesCase, MountPointTreeTest)
     EXPECT_EQ(point.storage, storage1);
     EXPECT_EQ(point.priority, priority1);
 }
+
