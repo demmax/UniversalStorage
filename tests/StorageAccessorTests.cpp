@@ -3,7 +3,7 @@
 //
 
 #include "StorageAccessor.h"
-#include "mocks/NaivePhysicalStorage.h"
+#include "mocks/MemoryStorage.h"
 #include "mocks/MockPhysicalStorage.h"
 
 #include <gtest/gtest.h>
@@ -11,7 +11,7 @@
 
 StorageAccessor makeSimpleAccessor()
 {
-    IStoragePtr storage = std::make_shared<NaivePhysicalStorage>();
+    IStoragePtr storage = std::make_shared<MemoryStorage>();
     StorageAccessor accessor;
     accessor.mountPhysicalVolume(storage, "/", 1);
     return std::move(accessor);
