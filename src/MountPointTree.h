@@ -15,10 +15,16 @@ struct MountPoint
 {
     IStoragePtr storage;
     uint32_t priority;
-    std::string path;
-    MountPoint(IStoragePtr s, std::string _path, uint32_t p)
-            : storage(std::move(s)), path(std::move(_path)), priority(p) {}
+    std::string physical_path;
+    std::string mount_path;
+
+    MountPoint(IStoragePtr s, std::string _ppath, std::string _mpath, uint32_t p)
+            : storage(std::move(s)), physical_path(std::move(_ppath)), mount_path(std::move(_mpath)), priority(p) {}
     bool operator<(const MountPoint &o) const { return priority > o.priority; }
+    std::string fullPath(const std::string &path) const {
+        std::string result = path;
+        return physical_path + (result.erase(0, mount_path.length()));
+    }
 };
 
 
@@ -26,8 +32,9 @@ class MountPointTree
 {
 public:
     MountPointTree();
-    void addMountPoint(const std::string &path, IStoragePtr storage, const std::string &real_path, uint32_t priority);
+    void addMountPoint(const std::string &path, IStoragePtr storage, const std::string &phys_path, size_t priority);
     void removeMountPoint(IStoragePtr storage);
+    std::optional<MountPoint> getPriorityStorage(const std::string &path) const;
     std::set<MountPoint> getSuitableStorageList(const std::string &path) const;
 
 protected:

@@ -22,6 +22,7 @@ public:
 
     void setValue(const std::string &path, const std::vector<uint8_t> &data) override;
     std::vector<uint8_t> getValue(const std::string &path) const override;
+    void removeValue(const std::string &path) override;
     bool isExist(const std::string &path) const override;
     ~NaiveStorage() override = default;
 

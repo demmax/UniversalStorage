@@ -10,7 +10,7 @@ TEST(MountPointTreeRootCase, MountPointTreeTest)
 {
     MountPointTree tree;
     std::shared_ptr storage = std::make_shared<MockPhysicalStorage>();
-    uint32_t priority = 42;
+    size_t priority = 42;
     tree.addMountPoint("/", storage, "/", priority);
 
     auto storages = tree.getSuitableStorageList("/");
@@ -25,7 +25,7 @@ TEST(MountPointTreeNotRootCase, MountPointTreeTest)
 {
     MountPointTree tree;
     std::shared_ptr storage = std::make_shared<MockPhysicalStorage>();
-    uint32_t priority = 42;
+    size_t priority = 42;
     std::string path = "/a/b/c";
     tree.addMountPoint(path, storage, "/", priority);
 
@@ -43,9 +43,9 @@ TEST(MountPointTreeSuitableTwoOfThreeCase, MountPointTreeTest)
     std::shared_ptr storage2 = std::make_shared<MockPhysicalStorage>();
     std::shared_ptr storage3 = std::make_shared<MockPhysicalStorage>();
 
-    uint32_t priority1 = 12;
-    uint32_t priority2 = 42;
-    uint32_t priority3 = 43;
+    size_t priority1 = 12;
+    size_t priority2 = 42;
+    size_t priority3 = 43;
 
     std::string path1 = "/a/b";
     std::string path2 = "/a/b/d/h";
@@ -75,10 +75,10 @@ TEST(MountPointTreeRemovingStorageCase, MountPointTreeTest)
     std::shared_ptr storage3 = std::make_shared<MockPhysicalStorage>();
     std::shared_ptr storage4 = std::make_shared<MockPhysicalStorage>();
 
-    uint32_t priority1 = 12;
-    uint32_t priority2 = 42;
-    uint32_t priority3 = 43;
-    uint32_t priority4 = 33;
+    size_t priority1 = 12;
+    size_t priority2 = 42;
+    size_t priority3 = 43;
+    size_t priority4 = 33;
 
     std::string path1 = "/a/b";
     std::string path2 = "/a/b/d/h";
@@ -111,10 +111,10 @@ TEST(MountPointOneStorageFewPlacesCase, MountPointTreeTest)
     std::shared_ptr storage2 = std::make_shared<MockPhysicalStorage>();
     std::shared_ptr storage3 = std::make_shared<MockPhysicalStorage>();
 
-    uint32_t priority1 = 12;
-    uint32_t priority2 = 42;
-    uint32_t priority3 = 43;
-    uint32_t priority4 = 46;
+    size_t priority1 = 12;
+    size_t priority2 = 42;
+    size_t priority3 = 43;
+    size_t priority4 = 46;
 
     std::string path1 = "/a/b";
     std::string path2 = "/a/b/d/h";
@@ -135,3 +135,19 @@ TEST(MountPointOneStorageFewPlacesCase, MountPointTreeTest)
     EXPECT_EQ(point.priority, priority1);
 }
 
+TEST(MountPointGetStorageWithNonRootMount, MountPointTreeTest)
+{
+    MountPointTree tree;
+    auto storage = std::make_shared<MockPhysicalStorage>();
+    std::string mount_path = "/a/b";
+    std::string phisical_path = "/x/y";
+    std::string test_path = "/g/f";
+    std::string request_path = mount_path + test_path;
+    std::string expected_path = phisical_path + test_path;
+    size_t priority = 1;
+
+
+    tree.addMountPoint(mount_path, storage, phisical_path, priority);
+    MountPoint mount_point = tree.getPriorityStorage(mount_path + test_path).value();
+    EXPECT_EQ(mount_point.fullPath(request_path), expected_path);
+}

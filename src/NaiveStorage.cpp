@@ -3,6 +3,7 @@
 //
 
 #include "NaiveStorage.h"
+#include "exceptions.h"
 #include <iostream>
 #include <boost/interprocess/exceptions.hpp>
 #include <memory>
@@ -35,13 +36,17 @@ std::vector<uint8_t> NaiveStorage::getValue(const std::string &path) const
 {
     KeyType key(p_file->get_segment_manager());
     key.assign(path.begin(), path.end());
-    ValueType val = p_data->at(key);
-    return std::vector<uint8_t>(val.begin(), val.end());
+    try {
+        ValueType val = p_data->at(key);
+        return std::vector<uint8_t>(val.begin(), val.end());
+    }
+    catch (const std::exception &) {
+        throw NoSuchPathException(path.c_str());
+    }
 }
 
 bool NaiveStorage::isExist(const std::string &path) const
 {
-
     return false;
 }
 
@@ -53,5 +58,12 @@ void NaiveStorage::trySetValue(const std::string &path, const std::vector<uint8_
     ValueType val(allocator);
     val.assign(data.begin(), data.end());
     p_data->emplace(key, val);
+}
+
+void NaiveStorage::removeValue(const std::string &path)
+{
+    KeyType key(p_file->get_segment_manager());
+    key.assign(path.begin(), path.end());
+    p_data->erase(key);
 }
 

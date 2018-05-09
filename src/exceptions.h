@@ -8,17 +8,33 @@
 #include <stdexcept>
 
 
-class BadPathException : public std::runtime_error
+class StorageException : public std::runtime_error
 {
 public:
-    BadPathException(const char *msg) : std::runtime_error(msg) {}
+    StorageException(const char *msg) : std::runtime_error(msg) {}
 };
 
 
-class NoSuchPathException : public std::runtime_error
+class BadPathException : public StorageException
 {
 public:
-    NoSuchPathException(const char *msg) : std::runtime_error(msg) {}
+    BadPathException(const char *msg) : StorageException(msg) {}
 };
+
+
+class NoSuchPathException : public StorageException
+{
+public:
+    NoSuchPathException(const char *msg) : StorageException(msg) {}
+};
+
+
+class ConfigurationException : public StorageException
+{
+public:
+    ConfigurationException(const char *msg) : StorageException(msg) {}
+};
+
+
 
 #endif //UNIVERSALSTORAGE_EXCEPTIONS_H

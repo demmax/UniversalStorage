@@ -6,16 +6,16 @@
 #include <boost/endian/conversion.hpp>
 
 
-int StorageAccessor::mountPhysicalVolume(std::shared_ptr<IStorage> storage, const std::string &mount_point,
-                                         int priority, const std::string &path)
+void StorageAccessor::mountPhysicalVolume(std::shared_ptr<IStorage> storage, const std::string &mount_point,
+                                         size_t priority, const std::string &path)
 {
-    m_storage = storage;
-    return 0;
+    m_storageTree.addMountPoint(mount_point, storage, path, priority);
 }
 
-std::string StorageAccessor::getFullPhysicalPath(IStoragePtr storage, const std::string &rel_path) const
+std::string StorageAccessor::getFullPhysicalPath(const std::string &request_path, const std::string &mount_path, const std::string &phys_path) const
 {
-    return rel_path;
+    std::string result = request_path;
+    return phys_path + (result.erase(0, mount_path.length()));
 }
 
 IStoragePtr StorageAccessor::getForegroundPhysicalStorage(const std::string &path) const

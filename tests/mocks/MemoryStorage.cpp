@@ -20,3 +20,8 @@ std::vector<uint8_t> MemoryStorage::getValue(const std::string &path) const
 {
     return m_dataMap.at(path);
 }
+
+void MemoryStorage::removeValue(const std::string &path)
+{
+    m_dataMap.erase(path);
+}

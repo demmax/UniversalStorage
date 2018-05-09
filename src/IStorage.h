@@ -16,6 +16,7 @@ class IStorage
 public:
     virtual void setValue(const std::string &path, const std::vector<uint8_t> &data) = 0;
     virtual std::vector<uint8_t> getValue(const std::string &path) const = 0;
+    virtual void removeValue(const std::string &path) = 0;
     virtual bool isExist(const std::string &path) const = 0;
     virtual ~IStorage() = default;
 };
