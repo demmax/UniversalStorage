@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include "MountPointTree.h"
-#include "mocks/MockPhysicalStorage.h"
+#include "../mocks/MockPhysicalStorage.h"
 
 TEST(MountPointTreeRootCase, MountPointTreeTest)
 {

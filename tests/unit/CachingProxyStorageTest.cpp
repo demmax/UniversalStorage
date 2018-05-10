@@ -3,7 +3,7 @@
 //
 
 #include <gtest/gtest.h>
-#include "mocks/MockPhysicalStorage.h"
+#include "../mocks/MockPhysicalStorage.h"
 #include "CachingProxyStorage.h"
 
 TEST(SimpleGetCaseExpectStorageAccess, CachingStorageTest)

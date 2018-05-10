@@ -3,8 +3,8 @@
 //
 
 #include "StorageAccessor.h"
-#include "mocks/MemoryStorage.h"
-#include "mocks/MockPhysicalStorage.h"
+#include "../mocks/MemoryStorage.h"
+#include "../mocks/MockPhysicalStorage.h"
 
 #include <gtest/gtest.h>
 
