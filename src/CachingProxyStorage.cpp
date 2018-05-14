@@ -71,7 +71,7 @@ void CachingProxyStorage::freeCache(size_t additional_space) const
 {
     while (m_maxSize < m_currentSize + additional_space) {
         if (m_lru_list.empty())
-            throw ConfigurationException("Not enough cache size to store elements");
+            throw BadValueException("Not enough cache size to store elements");
         auto to_del = m_lru_list.front();
         m_lru_list.pop_front();
         size_t diff = to_del->second.data.size();

@@ -6,7 +6,7 @@
 #include "../mocks/MockPhysicalStorage.h"
 #include "CachingProxyStorage.h"
 
-TEST(SimpleGetCaseExpectStorageAccess, CachingStorageTest)
+TEST(CachingStorageTest, SimpleGetCaseExpectStorageAccess)
 {
     std::string path = "/a/b/c";
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
@@ -16,7 +16,7 @@ TEST(SimpleGetCaseExpectStorageAccess, CachingStorageTest)
     cache.getValue(path);
 }
 
-TEST(SimpleTestSetGetCaseExpectOneStorageWriteZeroRead, CachingStorageTest)
+TEST(CachingStorageTest, SimpleTestSetGetCaseExpectOneStorageWriteZeroRead)
 {
     std::string path = "/a/b/c";
     std::vector<uint8_t> vec = {1, 2, 3};
@@ -29,7 +29,7 @@ TEST(SimpleTestSetGetCaseExpectOneStorageWriteZeroRead, CachingStorageTest)
     EXPECT_EQ(cache.getValue(path), vec);
 }
 
-TEST(SimpleTestFewSetGetCase, CachingStorageTest)
+TEST(CachingStorageTest, SimpleTestFewSetGetCase)
 {
     std::string path1 = "/a/b/c";
     std::string path2 = "/d/e/f";
@@ -58,7 +58,7 @@ TEST(SimpleTestFewSetGetCase, CachingStorageTest)
     EXPECT_EQ(cache.getValue(path3), vec3);
 }
 
-TEST(CacheRotateExpectStorageAccess, CachingStorageTest)
+TEST(CachingStorageTest, CacheRotateExpectStorageAccess)
 {
     std::string path1 = "/a/b/c";
     std::string path2 = "/d/e/f";
@@ -83,7 +83,7 @@ TEST(CacheRotateExpectStorageAccess, CachingStorageTest)
     EXPECT_EQ(cache.getValue(path1), vec1);
 }
 
-TEST(CacheDoubleSetCaseExpectLastValue, CachingStorageTest)
+TEST(CachingStorageTest, CacheDoubleSetCaseExpectLastValue)
 {
     std::string path = "/a/b/c";
     std::vector<uint8_t> vec1 = {1, 2, 3};
@@ -97,7 +97,7 @@ TEST(CacheDoubleSetCaseExpectLastValue, CachingStorageTest)
     EXPECT_EQ(cache.getValue(path), vec2);
 }
 
-TEST(CacheDoubleGetAfterCacheClearingCaseExpectJustOneLoad, CachingStorageTest)
+TEST(CachingStorageTest, CacheDoubleGetAfterCacheClearingCaseExpectJustOneLoad)
 {
     std::string path1 = "/a/b/c";
     std::string path2 = "/d/e/f";
@@ -124,7 +124,7 @@ TEST(CacheDoubleGetAfterCacheClearingCaseExpectJustOneLoad, CachingStorageTest)
     EXPECT_EQ(cache.getValue(path1), vec1);
 }
 
-TEST(SimpleRemoveExpectStorageRemove, CachingStorageTest)
+TEST(CachingStorageTest, SimpleRemoveExpectStorageRemove)
 {
     std::string path = "/a/b/c";
     auto mock_storage = std::make_shared<MockPhysicalStorage>();

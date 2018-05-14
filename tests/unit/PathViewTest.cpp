@@ -6,7 +6,7 @@
 #include <exceptions.h>
 #include "PathView.h"
 
-TEST(PathViewOkTest, PathViewTest)
+TEST(PathViewTest, PathViewOkTest)
 {
     std::string path = "/asd/qwe/zxc";
     std::string parts[] = {"/", "asd", "qwe", "zxc"};
@@ -20,7 +20,7 @@ TEST(PathViewOkTest, PathViewTest)
 }
 
 
-TEST(PathViewEndsWithSlashTest, PathViewTest)
+TEST(PathViewTest, PathViewEndsWithSlashTest)
 {
     std::string path = "/asd/qwe/zxc/";
     std::string parts[] = {"/", "asd", "qwe", "zxc"};
@@ -33,7 +33,7 @@ TEST(PathViewEndsWithSlashTest, PathViewTest)
     EXPECT_EQ(i, sizeof(parts)/sizeof(std::string));
 }
 
-TEST(PathViewWrongPathTest, PathViewTest)
+TEST(PathViewTest, PathViewWrongPathTest)
 {
     std::string path = "//asd//qwe/";
     PathView view(path);

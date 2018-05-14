@@ -16,8 +16,6 @@ class CachingProxyStorage : public IStorage
 public:
     // TODO: Check exception-safety
     CachingProxyStorage(IStoragePtr storage, size_t max_size);
-    ~CachingProxyStorage() override = default;
-
     void setValue(const std::string &path, const std::vector<uint8_t> &data) override;
     std::vector<uint8_t> getValue(const std::string &path) const override;
     void removeValue(const std::string &path) override;

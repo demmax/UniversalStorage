@@ -6,7 +6,7 @@
 #define UNIVERSALSTORAGE_UNIVERSALSTORAGEFIXTURE_H
 
 #include <gtest/gtest.h>
-#include "StorageAccessor.h"
+#include "StorageAccessor.hpp"
 #include "CachingProxyStorage.h"
 #include "NaiveStorage.h"
 

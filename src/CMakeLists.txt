@@ -1,5 +1,5 @@
-set(SOURCES StorageAccessor.cpp DataSerializer.hpp MountPointTree.cpp MountPointTree.h)
-set(HEADERS StorageAccessor.h IStorage.h exceptions.h PathView.cpp PathView.h NaiveStorage.cpp NaiveStorage.h CachingProxyStorage.cpp CachingProxyStorage.h)
+set(SOURCES StorageAccessor.hpp DataSerializer.hpp MountPointTree.cpp MountPointTree.h function_checking.hpp  PathView.cpp NaiveStorage.cpp CachingProxyStorage.cpp)
+set(HEADERS IStorage.h exceptions.h PathView.h  NaiveStorage.h  CachingProxyStorage.h)
 
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})

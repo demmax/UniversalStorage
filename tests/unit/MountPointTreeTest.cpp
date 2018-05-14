@@ -6,7 +6,7 @@
 #include "MountPointTree.h"
 #include "../mocks/MockPhysicalStorage.h"
 
-TEST(MountPointTreeRootCase, MountPointTreeTest)
+TEST(MountPointTreeTest, MountPointTreeRootCase)
 {
     MountPointTree tree;
     std::shared_ptr storage = std::make_shared<MockPhysicalStorage>();
@@ -21,7 +21,7 @@ TEST(MountPointTreeRootCase, MountPointTreeTest)
 }
 
 
-TEST(MountPointTreeNotRootCase, MountPointTreeTest)
+TEST(MountPointTreeTest, MountPointTreeNotRootCase)
 {
     MountPointTree tree;
     std::shared_ptr storage = std::make_shared<MockPhysicalStorage>();
@@ -36,7 +36,7 @@ TEST(MountPointTreeNotRootCase, MountPointTreeTest)
     EXPECT_EQ(point.priority, priority);
 }
 
-TEST(MountPointTreeSuitableTwoOfThreeCase, MountPointTreeTest)
+TEST(MountPointTreeTest, MountPointTreeSuitableTwoOfThreeCase)
 {
     MountPointTree tree;
     std::shared_ptr storage1 = std::make_shared<MockPhysicalStorage>();
@@ -67,7 +67,7 @@ TEST(MountPointTreeSuitableTwoOfThreeCase, MountPointTreeTest)
 }
 
 
-TEST(MountPointTreeRemovingStorageCase, MountPointTreeTest)
+TEST(MountPointTreeTest, MountPointTreeRemovingStorageCase)
 {
     MountPointTree tree;
     std::shared_ptr storage1 = std::make_shared<MockPhysicalStorage>();
@@ -104,7 +104,7 @@ TEST(MountPointTreeRemovingStorageCase, MountPointTreeTest)
 }
 
 
-TEST(MountPointOneStorageFewPlacesCase, MountPointTreeTest)
+TEST(MountPointTreeTest, MountPointOneStorageFewPlacesCase)
 {
     MountPointTree tree;
     std::shared_ptr storage1 = std::make_shared<MockPhysicalStorage>();
@@ -135,7 +135,7 @@ TEST(MountPointOneStorageFewPlacesCase, MountPointTreeTest)
     EXPECT_EQ(point.priority, priority1);
 }
 
-TEST(MountPointGetStorageWithNonRootMount, MountPointTreeTest)
+TEST(MountPointTreeTest, MountPointGetStorageWithNonRootMount)
 {
     MountPointTree tree;
     auto storage = std::make_shared<MockPhysicalStorage>();

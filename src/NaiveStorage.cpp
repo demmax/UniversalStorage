@@ -57,7 +57,11 @@ void NaiveStorage::trySetValue(const std::string &path, const std::vector<uint8_
     key.assign(path.begin(), path.end());
     ValueType val(allocator);
     val.assign(data.begin(), data.end());
-    p_data->emplace(key, val);
+    auto it = p_data->find(key);
+    if (it == p_data->end())
+        p_data->emplace(key, val);
+    else
+        (*it).second = val;
 }
 
 void NaiveStorage::removeValue(const std::string &path)

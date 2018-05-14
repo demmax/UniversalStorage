@@ -29,10 +29,10 @@ public:
 };
 
 
-class ConfigurationException : public StorageException
+class BadValueException : public StorageException
 {
 public:
-    ConfigurationException(const char *msg) : StorageException(msg) {}
+    BadValueException(const char *msg) : StorageException(msg) {}
 };
 
 

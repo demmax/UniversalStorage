@@ -20,7 +20,9 @@ struct MountPoint
 
     MountPoint(IStoragePtr s, std::string _ppath, std::string _mpath, uint32_t p)
             : storage(std::move(s)), physical_path(std::move(_ppath)), mount_path(std::move(_mpath)), priority(p) {}
+
     bool operator<(const MountPoint &o) const { return priority > o.priority; }
+
     std::string fullPath(const std::string &path) const {
         std::string result = path;
         return physical_path + (result.erase(0, mount_path.length()));

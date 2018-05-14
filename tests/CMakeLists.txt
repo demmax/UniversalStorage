@@ -1,3 +1,8 @@
+enable_testing()
+
+find_package(GTest REQUIRED)
+find_package(GMock REQUIRED)
+
 set(MOCKS
         ${CMAKE_CURRENT_SOURCE_DIR}/mocks/MemoryStorage.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/mocks/MemoryStorage.h
