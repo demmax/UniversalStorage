@@ -8,6 +8,8 @@
 #include <boost/format.hpp>
 
 
+using namespace UniversalStorage;
+
 CachingProxyStorage::CachingProxyStorage(IStoragePtr storage, size_t max_size)
         : p_storage(std::move(storage)), m_maxSize(max_size), m_currentSize(0)
 {

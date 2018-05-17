@@ -6,6 +6,7 @@
 #include <exceptions.h>
 #include "NaiveStorage.h"
 
+using namespace UniversalStorage;
 
 TEST(NaiveStorageTest, SimpleSetGetCase)
 {

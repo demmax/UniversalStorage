@@ -5,6 +5,8 @@
 #include "exceptions.h"
 #include "PathView.h"
 
+using namespace UniversalStorage;
+
 PathView::PathView(std::string_view path) : m_path(path) {}
 
 

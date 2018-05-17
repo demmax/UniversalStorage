@@ -165,10 +165,13 @@ struct CustomStruct
 
 namespace UniversalStorage {
     namespace TypeTraits {
-        std::vector<uint8_t> serialize(const CustomStruct &a) {
+        template<>
+        std::vector<uint8_t> serialize<CustomStruct>(const CustomStruct &a) {
             return std::vector<uint8_t> {1, 2, 3};
         }
-        CustomStruct deserialize(const std::vector<uint8_t> &data) {
+
+        template<>
+        CustomStruct deserialize<CustomStruct>(const std::vector<uint8_t> &data) {
             CustomStruct a;
             a.counter = std::accumulate(data.begin(), data.end(), 0);
             return a;
@@ -178,11 +181,11 @@ namespace UniversalStorage {
 
 TEST(StorageAccessorFunctionality, CustomTypeWithFreeFunctionsTest)
 {
-//    auto path = "/1";
-//    CustomStruct val; // {.i = 42, .f = 3.14, .s = "Строка", .s=1}
-//    auto accessor = makeSimpleAccessor();
-//    accessor.setValue(path, val);
-//    auto s = accessor.getValue<decltype(val)>(path);
-//
-//    EXPECT_EQ(s.counter, 6);
+    auto path = "/1";
+    CustomStruct val; // {.i = 42, .f = 3.14, .s = "Строка", .s=1}
+    auto accessor = makeSimpleAccessor();
+    accessor.setValue(path, val);
+    auto s = accessor.getValue<decltype(val)>(path);
+
+    EXPECT_EQ(s.counter, 6);
 }

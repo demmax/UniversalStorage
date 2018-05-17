@@ -7,6 +7,8 @@
 
 #include <stdexcept>
 
+namespace UniversalStorage {
+
 
 class StorageException : public std::runtime_error
 {
@@ -35,6 +37,6 @@ public:
     BadValueException(const char *msg) : StorageException(msg) {}
 };
 
-
+}
 
 #endif //UNIVERSALSTORAGE_EXCEPTIONS_H

@@ -6,6 +6,10 @@
 #include "MountPointTree.h"
 #include "../mocks/MockPhysicalStorage.h"
 
+
+using namespace UniversalStorage;
+
+
 TEST(MountPointTreeTest, MountPointTreeRootCase)
 {
     MountPointTree tree;

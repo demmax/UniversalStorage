@@ -9,6 +9,9 @@
 #include <memory>
 
 
+using namespace UniversalStorage;
+
+
 NaiveStorage::NaiveStorage(std::string file_path)
         : m_fileName(std::move(file_path))
 {

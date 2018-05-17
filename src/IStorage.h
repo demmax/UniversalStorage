@@ -10,6 +10,7 @@
 #include <cstring>
 #include <vector>
 
+namespace UniversalStorage {
 
 class IStorage
 {
@@ -24,5 +25,6 @@ public:
 
 using IStoragePtr = std::shared_ptr<IStorage>;
 
+}
 
 #endif // UNIVERSALSTORAGE_ISTORAGE_H

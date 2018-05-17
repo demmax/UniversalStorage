@@ -8,6 +8,9 @@
 #include "PathView.h"
 
 
+using namespace UniversalStorage;
+
+
 MountPointTree::MountPointTree()
 {
     m_root = std::make_shared<MountPointTreeNode>("/");

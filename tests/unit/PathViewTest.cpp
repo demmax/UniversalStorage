@@ -6,6 +6,8 @@
 #include <exceptions.h>
 #include "PathView.h"
 
+using namespace UniversalStorage;
+
 TEST(PathViewTest, PathViewOkTest)
 {
     std::string path = "/asd/qwe/zxc";

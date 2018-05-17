@@ -10,6 +10,8 @@
 
 #include "IStorage.h"
 
+namespace UniversalStorage {
+
 
 struct MountPoint
 {
@@ -18,12 +20,16 @@ struct MountPoint
     std::string physical_path;
     std::string mount_path;
 
+
     MountPoint(IStoragePtr s, std::string _ppath, std::string _mpath, uint32_t p)
             : storage(std::move(s)), physical_path(std::move(_ppath)), mount_path(std::move(_mpath)), priority(p) {}
 
+
     bool operator<(const MountPoint &o) const { return priority > o.priority; }
 
-    std::string fullPath(const std::string &path) const {
+
+    std::string fullPath(const std::string &path) const
+    {
         std::string result = path;
         return physical_path + (result.erase(0, mount_path.length()));
     }
@@ -46,14 +52,16 @@ protected:
         std::vector<MountPoint> storage_vector;
         std::vector<std::shared_ptr<MountPointTreeNode>> children;
 
+
         MountPointTreeNode(std::string path) : rel_path(std::move(path)) {}
     };
 
-    MountPointTreeNode* make_node(MountPointTreeNode* current, std::string_view path);
+    MountPointTreeNode *make_node(MountPointTreeNode *current, std::string_view path);
     void removeStorage(MountPointTreeNode *node, IStoragePtr storage);
 
     std::shared_ptr<MountPointTreeNode> m_root;
 };
 
+}
 
 #endif //UNIVERSALSTORAGE_MOUNTPOINTTREE_H

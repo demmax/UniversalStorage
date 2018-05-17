@@ -15,6 +15,9 @@
 #include <boost/interprocess/containers/map.hpp>
 
 
+namespace UniversalStorage {
+
+
 class NaiveStorage : public IStorage
 {
 public:
@@ -27,7 +30,7 @@ public:
 
 protected:
     using MappedFile = boost::interprocess::managed_mapped_file;
-    template <typename T> using MappedFileAllocator = boost::interprocess::allocator<T, MappedFile::segment_manager>;
+    template<typename T> using MappedFileAllocator = boost::interprocess::allocator<T, MappedFile::segment_manager>;
     using KeyType = boost::interprocess::basic_string<char, std::char_traits<char>, MappedFileAllocator<char>>;
     using ValueType = boost::interprocess::vector<uint8_t, MappedFileAllocator<uint8_t>>;
     using MapNodeType = std::pair<const KeyType, ValueType>;
@@ -42,5 +45,6 @@ protected:
     static constexpr size_t INITIAL_SIZE = 4 * 1024;
 };
 
+}
 
 #endif //UNIVERSALSTORAGE_NAIVESTORAGE_H

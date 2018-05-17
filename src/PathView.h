@@ -8,6 +8,9 @@
 #include <string_view>
 
 
+namespace UniversalStorage {
+
+
 class PathView
 {
 public:
@@ -22,5 +25,7 @@ protected:
     size_t m_start, m_end;
 };
 
+
+}
 
 #endif //UNIVERSALSTORAGE_PATHVIEW_H

@@ -11,6 +11,9 @@
 #include <list>
 
 
+namespace UniversalStorage {
+
+
 class CachingProxyStorage : public IStorage
 {
 public:
@@ -19,7 +22,6 @@ public:
     void setValue(const std::string &path, const std::vector<uint8_t> &data) override;
     std::vector<uint8_t> getValue(const std::string &path) const override;
     void removeValue(const std::string &path) override;
-
     bool isExist(const std::string &path) const override;
 
 protected:
@@ -33,6 +35,7 @@ protected:
     using IteratorList = std::list<Map::iterator>;
 
     void freeCache(size_t additional_space) const;
+
     void advanceIterator(Map::iterator iter) const;
 
 
@@ -44,5 +47,6 @@ protected:
     mutable IteratorList m_lru_list;
 };
 
+}
 
 #endif //UNIVERSALSTORAGE_CACHINGPROXYSTORAGE_H

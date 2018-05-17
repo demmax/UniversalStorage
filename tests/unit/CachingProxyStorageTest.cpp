@@ -6,6 +6,9 @@
 #include "../mocks/MockPhysicalStorage.h"
 #include "CachingProxyStorage.h"
 
+using namespace UniversalStorage;
+
+
 TEST(CachingStorageTest, SimpleGetCaseExpectStorageAccess)
 {
     std::string path = "/a/b/c";

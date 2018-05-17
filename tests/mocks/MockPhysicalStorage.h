@@ -11,6 +11,7 @@
 #include <gmock/gmock.h>
 #include <string>
 
+using namespace UniversalStorage;
 
 class MockPhysicalStorage : public IStorage
 {

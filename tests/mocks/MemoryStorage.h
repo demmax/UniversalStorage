@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
+using namespace UniversalStorage;
 
 class MemoryStorage : public IStorage
 {
