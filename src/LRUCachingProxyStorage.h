@@ -2,8 +2,8 @@
 // Created by maxon on 06.05.18.
 //
 
-#ifndef UNIVERSALSTORAGE_CACHINGPROXYSTORAGE_H
-#define UNIVERSALSTORAGE_CACHINGPROXYSTORAGE_H
+#ifndef UNIVERSALSTORAGE_LRUCACHINGPROXYSTORAGE_H
+#define UNIVERSALSTORAGE_LRUCACHINGPROXYSTORAGE_H
 
 #include "IStorage.h"
 
@@ -14,11 +14,11 @@
 namespace UniversalStorage {
 
 
-class CachingProxyStorage : public IStorage
+class LRUCachingProxyStorage : public IStorage
 {
 public:
     // TODO: Check exception-safety
-    CachingProxyStorage(IStoragePtr storage, size_t max_size);
+    LRUCachingProxyStorage(IStoragePtr storage, size_t max_size);
     void setValue(const std::string &path, const std::vector<uint8_t> &data) override;
     std::vector<uint8_t> getValue(const std::string &path) const override;
     void removeValue(const std::string &path) override;
@@ -49,4 +49,4 @@ protected:
 
 }
 
-#endif //UNIVERSALSTORAGE_CACHINGPROXYSTORAGE_H
+#endif //UNIVERSALSTORAGE_LRUCACHINGPROXYSTORAGE_H

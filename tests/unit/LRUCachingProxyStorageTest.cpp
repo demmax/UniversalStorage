@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include "../mocks/MockPhysicalStorage.h"
-#include "CachingProxyStorage.h"
+#include "LRUCachingProxyStorage.h"
 
 using namespace UniversalStorage;
 
@@ -13,7 +13,7 @@ TEST(CachingStorageTest, SimpleGetCaseExpectStorageAccess)
 {
     std::string path = "/a/b/c";
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
-    CachingProxyStorage cache(mock_storage, 1024);
+    LRUCachingProxyStorage cache(mock_storage, 1024);
 
     EXPECT_CALL(*mock_storage, getValue(path)).Times(1);
     cache.getValue(path);
@@ -24,7 +24,7 @@ TEST(CachingStorageTest, SimpleTestSetGetCaseExpectOneStorageWriteZeroRead)
     std::string path = "/a/b/c";
     std::vector<uint8_t> vec = {1, 2, 3};
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
-    CachingProxyStorage cache(mock_storage, 1024);
+    LRUCachingProxyStorage cache(mock_storage, 1024);
 
     EXPECT_CALL(*mock_storage, setValue(path, vec));
     EXPECT_CALL(*mock_storage, getValue(testing::_)).Times(0);
@@ -43,7 +43,7 @@ TEST(CachingStorageTest, SimpleTestFewSetGetCase)
     std::vector<uint8_t> vec3 = {7, 8, 9};
 
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
-    CachingProxyStorage cache(mock_storage, 1024);
+    LRUCachingProxyStorage cache(mock_storage, 1024);
 
     EXPECT_CALL(*mock_storage, setValue(path1, vec1));
     EXPECT_CALL(*mock_storage, setValue(path2, vec2));
@@ -72,7 +72,7 @@ TEST(CachingStorageTest, CacheRotateExpectStorageAccess)
     std::vector<uint8_t> vec3 = {7, 8, 9};
 
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
-    CachingProxyStorage cache(mock_storage, 8);
+    LRUCachingProxyStorage cache(mock_storage, 8);
 
     EXPECT_CALL(*mock_storage, setValue(path1, vec1));
     EXPECT_CALL(*mock_storage, setValue(path2, vec2));
@@ -93,7 +93,7 @@ TEST(CachingStorageTest, CacheDoubleSetCaseExpectLastValue)
     std::vector<uint8_t> vec2 = {4, 5, 6};
 
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
-    CachingProxyStorage cache(mock_storage, 8);
+    LRUCachingProxyStorage cache(mock_storage, 8);
     EXPECT_CALL(*mock_storage, setValue(::testing::_, ::testing::_)).Times(2); // suppress gmock warning about "Uninteresting mock function call - returning directly"
     cache.setValue(path, vec1);
     cache.setValue(path, vec2);
@@ -111,7 +111,7 @@ TEST(CachingStorageTest, CacheDoubleGetAfterCacheClearingCaseExpectJustOneLoad)
     std::vector<uint8_t> vec3 = {7, 8, 9};
 
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
-    CachingProxyStorage cache(mock_storage, 8);
+    LRUCachingProxyStorage cache(mock_storage, 8);
 
     EXPECT_CALL(*mock_storage, setValue(path1, vec1));
     EXPECT_CALL(*mock_storage, setValue(path2, vec2));
@@ -131,7 +131,7 @@ TEST(CachingStorageTest, SimpleRemoveExpectStorageRemove)
 {
     std::string path = "/a/b/c";
     auto mock_storage = std::make_shared<MockPhysicalStorage>();
-    CachingProxyStorage cache(mock_storage, 1024);
+    LRUCachingProxyStorage cache(mock_storage, 1024);
 
     EXPECT_CALL(*mock_storage, removeValue(path)).Times(1);
     cache.removeValue(path);

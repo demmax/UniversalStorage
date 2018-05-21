@@ -36,13 +36,17 @@ protected:
 template<typename T>
 void StorageAccessor::setValue(const std::string &path, const T &val)
 {
-    if constexpr (TypeTraits::can_serialize<T>::value && TypeTraits::can_deserialize<T>::value) {
+    if constexpr (std::is_array_v<T> && std::is_same_v<std::decay_t<T>, char*>) {
+        // Implicit char array casting to avoid 'function returning an array' error from sfinae templates
+        setValueImpl(path, static_cast<const char*>(val));
+    }
+    else if constexpr (TypeTraits::can_serialize<T>::value && TypeTraits::can_deserialize<T>::value) {
         if constexpr (TypeTraits::has_serialize_method<T>::value)
             setValueImpl(path, val.serialize());
         else
             setValueImpl(path, TypeTraits::serialize<T>(val));
     } else {
-        static_assert(!std::is_pointer_v<T> || std::is_same_v<T, const char *>,
+        static_assert(!std::is_pointer_v<T> || std::is_same_v<T, const char *> || std::is_same_v<T, char *>,
                       "Non-pointer type or NULL-terminated string expected");
         static_assert(std::is_trivially_copy_constructible_v<T> || std::is_same_v<T, std::string>,
                       "Only trivially-copy-constructible types may be stored (or implement serialize/deserialize methods)");
@@ -179,6 +183,7 @@ void StorageAccessor::removeValue(const std::string &path)
         catch (const NoSuchPathException &ex) {}
     }
 }
+
 
 }
 

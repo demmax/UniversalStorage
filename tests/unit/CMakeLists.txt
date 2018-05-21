@@ -7,7 +7,7 @@ set(SOURCES
         MountPointTreeTest.cpp
         PathViewTest.cpp
         NaiveStorageTest.cpp
-        CachingProxyStorageTest.cpp)
+        LRUCachingProxyStorageTest.cpp)
 
 set(LIBS ${PROJECT_NAME} ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_executable(${TestName} ${SOURCES} ${MOCKS})

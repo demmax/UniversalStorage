@@ -26,7 +26,7 @@ void MountPointTree::addMountPoint(const std::string &mount_path, IStoragePtr st
     for (path_part = view.next(); path_part != view.end(); path_part = view.next())
     {
         auto it = std::find_if(current->children.begin(), current->children.end(),
-                [&](std::shared_ptr<MountPointTreeNode> node) {
+                [&](const std::shared_ptr<MountPointTreeNode> &node) {
             return node->rel_path == path_part;
         });
 
@@ -53,7 +53,7 @@ std::set<MountPoint> MountPointTree::getSuitableStorageList(const std::string &p
 
     for (path_part = view.next(); path_part != view.end(); path_part = view.next())
     {
-        auto it = std::find_if(current->children.begin(), current->children.end(), [&](std::shared_ptr<MountPointTreeNode> node) {
+        auto it = std::find_if(current->children.begin(), current->children.end(), [&](const std::shared_ptr<MountPointTreeNode> &node) {
             return node->rel_path == path_part;
         });
 
@@ -107,7 +107,7 @@ std::optional<MountPoint> MountPointTree::getPriorityStorage(const std::string &
 
     for (path_part = view.next(); path_part != view.end(); path_part = view.next())
     {
-        auto it = std::find_if(current->children.begin(), current->children.end(), [&](std::shared_ptr<MountPointTreeNode> node) {
+        auto it = std::find_if(current->children.begin(), current->children.end(), [&](const std::shared_ptr<MountPointTreeNode> &node) {
             return node->rel_path == path_part;
         });
 

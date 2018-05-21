@@ -4,6 +4,9 @@
 
 #include "UniversalStorageFixture.hpp"
 
+using namespace UniversalStorage;
+
+
 TEST_F(StorageFixture, BasicFunctionalityTest)
 {
     auto accessor = defaultAccessor();

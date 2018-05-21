@@ -91,6 +91,15 @@ TEST(StorageAccessorFunctionality, SimpleCNullTerminatedStringSetGetCheck)
     EXPECT_EQ(accessor.getValue<decltype(val)>(path), val);
 }
 
+TEST(StorageAccessorFunctionality, SimpleCNullTerminatedStringAsCharArraySetGetCheck)
+{
+    auto path = "/1";
+    auto accessor = makeSimpleAccessor();
+    char val[] = "I'am C Null-Terminated String!";
+    accessor.setValue(path, val);
+//    EXPECT_EQ(accessor.getValue<decltype(val)>(path), val);
+}
+
 TEST(StorageAccessorFunctionality, RemoveValueExpectStorageRemoving)
 {
     auto path = "/1";

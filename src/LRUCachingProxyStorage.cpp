@@ -2,7 +2,7 @@
 // Created by maxon on 06.05.18.
 //
 
-#include "CachingProxyStorage.h"
+#include "LRUCachingProxyStorage.h"
 #include "exceptions.h"
 
 #include <boost/format.hpp>
@@ -10,12 +10,12 @@
 
 using namespace UniversalStorage;
 
-CachingProxyStorage::CachingProxyStorage(IStoragePtr storage, size_t max_size)
+LRUCachingProxyStorage::LRUCachingProxyStorage(IStoragePtr storage, size_t max_size)
         : p_storage(std::move(storage)), m_maxSize(max_size), m_currentSize(0)
 {
 }
 
-void CachingProxyStorage::setValue(const std::string &path, const std::vector<uint8_t> &data)
+void LRUCachingProxyStorage::setValue(const std::string &path, const std::vector<uint8_t> &data)
 {
     p_storage->setValue(path, data);
 
@@ -39,7 +39,7 @@ void CachingProxyStorage::setValue(const std::string &path, const std::vector<ui
     }
 }
 
-std::vector<uint8_t> CachingProxyStorage::getValue(const std::string &path) const
+std::vector<uint8_t> LRUCachingProxyStorage::getValue(const std::string &path) const
 {
     auto it = m_cache.find(path);
     if (it != m_cache.end()) {
@@ -59,17 +59,17 @@ std::vector<uint8_t> CachingProxyStorage::getValue(const std::string &path) cons
     return data;
 }
 
-void CachingProxyStorage::advanceIterator(Map::iterator iter) const
+void LRUCachingProxyStorage::advanceIterator(Map::iterator iter) const
 {
     m_lru_list.splice(m_lru_list.end(), m_lru_list, std::any_cast<IteratorList::iterator>(iter->second.queue_iterator));
 }
 
-bool CachingProxyStorage::isExist(const std::string &path) const
+bool LRUCachingProxyStorage::isExist(const std::string &path) const
 {
     return false;
 }
 
-void CachingProxyStorage::freeCache(size_t additional_space) const
+void LRUCachingProxyStorage::freeCache(size_t additional_space) const
 {
     while (m_maxSize < m_currentSize + additional_space) {
         if (m_lru_list.empty())
@@ -82,7 +82,7 @@ void CachingProxyStorage::freeCache(size_t additional_space) const
     }
 }
 
-void CachingProxyStorage::removeValue(const std::string &path)
+void LRUCachingProxyStorage::removeValue(const std::string &path)
 {
     p_storage->removeValue(path);
     auto it = m_cache.find(path);

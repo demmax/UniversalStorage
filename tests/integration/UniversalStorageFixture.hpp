@@ -7,20 +7,27 @@
 
 #include <gtest/gtest.h>
 #include "StorageAccessor.hpp"
-#include "CachingProxyStorage.h"
+#include "LRUCachingProxyStorage.h"
 #include "NaiveStorage.h"
+
+using namespace UniversalStorage;
 
 
 class StorageFixture : public ::testing::Test
 {
 protected:
+    static constexpr const char *FILE_NAME = "tmp";
     StorageAccessor defaultAccessor()
     {
-        auto phys_storage = std::make_shared<NaiveStorage>("tmp");
-        auto proxy_storage = std::make_shared<CachingProxyStorage>(phys_storage, 1024 * 1024 * 50);
+        auto phys_storage = std::make_shared<NaiveStorage>(FILE_NAME);
+        auto proxy_storage = std::make_shared<LRUCachingProxyStorage>(phys_storage, 1024 * 1024 * 50);
         StorageAccessor accessor;
         accessor.mountPhysicalVolume(proxy_storage, "/", 100);
         return accessor;
+    }
+
+    ~StorageFixture() {
+        std::remove(FILE_NAME);
     }
 };
 
