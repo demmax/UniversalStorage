@@ -94,7 +94,7 @@ TEST(MountPointTreeTest, MountPointTreeRemovingStorageCase)
     tree.addMountPoint(path3, storage3, "/", priority3);
     tree.addMountPoint(path4, storage4, "/", priority4);
 
-    tree.removeMountPoint(storage2);
+    tree.removeMountPoint(path2);
 
     auto storages = tree.getSuitableStorageList(path2);
     EXPECT_EQ(storages.size(), 2);
@@ -115,10 +115,10 @@ TEST(MountPointTreeTest, MountPointOneStorageFewPlacesCase)
     std::shared_ptr storage2 = std::make_shared<MockPhysicalStorage>();
     std::shared_ptr storage3 = std::make_shared<MockPhysicalStorage>();
 
-    size_t priority1 = 12;
+    size_t priority1 = 36;
     size_t priority2 = 42;
     size_t priority3 = 43;
-    size_t priority4 = 46;
+    size_t priority4 = 12;
 
     std::string path1 = "/a/b";
     std::string path2 = "/a/b/d/h";
@@ -130,13 +130,17 @@ TEST(MountPointTreeTest, MountPointOneStorageFewPlacesCase)
     tree.addMountPoint(path3, storage3, "/", priority3);
     tree.addMountPoint(path4, storage2, "/", priority4);
 
-    tree.removeMountPoint(storage2);
+    tree.removeMountPoint(path2);
 
     auto storages = tree.getSuitableStorageList(path2);
-    EXPECT_EQ(storages.size(), 1);
-    auto point = *(storages.begin());
-    EXPECT_EQ(point.storage, storage1);
-    EXPECT_EQ(point.priority, priority1);
+    EXPECT_EQ(storages.size(), 2);
+    auto point = storages.begin();
+    EXPECT_EQ((*point).storage, storage1);
+    EXPECT_EQ((*point).priority, priority1);
+
+    ++point;
+    EXPECT_EQ((*point).storage, storage2);
+    EXPECT_EQ((*point).priority, priority4);
 }
 
 TEST(MountPointTreeTest, MountPointGetStorageWithNonRootMount)

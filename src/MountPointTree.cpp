@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <stack>
 #include "MountPointTree.h"
 #include "exceptions.h"
 #include "PathView.h"
@@ -23,8 +24,10 @@ void MountPointTree::addMountPoint(const std::string &mount_path, IStoragePtr st
     MountPointTreeNode* current = m_root.get();
     std::string_view path_part = view.begin();
 
+    std::unique_lock<std::shared_mutex> lock(m_treeMtx);
     for (path_part = view.next(); path_part != view.end(); path_part = view.next())
     {
+
         auto it = std::find_if(current->children.begin(), current->children.end(),
                 [&](const std::shared_ptr<MountPointTreeNode> &node) {
             return node->rel_path == path_part;
@@ -44,10 +47,10 @@ std::set<MountPoint> MountPointTree::getSuitableStorageList(const std::string &p
 {
     PathView view(path);
     std::string_view path_part = view.begin();
-
     std::set<MountPoint> result;
 
     MountPointTreeNode* current = m_root.get();
+    std::shared_lock<std::shared_mutex> lock(m_treeMtx);
     if (!current->storage_vector.empty())
         result.insert(current->storage_vector.begin(), current->storage_vector.end());
 
@@ -75,22 +78,35 @@ MountPointTree::MountPointTreeNode* MountPointTree::make_node(MountPointTreeNode
     return current->children.back().get();
 }
 
-void MountPointTree::removeMountPoint(IStoragePtr storage)
+void MountPointTree::removeMountPoint(const std::string &path)
 {
-    removeStorage(m_root.get(), std::move(storage));
+    std::unique_lock<std::shared_mutex> lock(m_treeMtx);
+    PathView view(path);
+    view.begin();
+    removeStorage(m_root.get(), view);
 }
 
-void MountPointTree::removeStorage(MountPointTreeNode *node, IStoragePtr storage)
+bool MountPointTree::removeStorage(MountPointTreeNode *node, PathView &view)
 {
-    node->storage_vector.erase(
-            std::remove_if(node->storage_vector.begin(), node->storage_vector.end(), [&](const MountPoint &point) -> bool {
-                return point.storage == storage;
-            }), node->storage_vector.end()
-    );
+    auto path_part = view.next();
+    if (path_part != view.end()) {
+        auto child = std::find_if(node->children.begin(), node->children.end(), [&](const std::shared_ptr<MountPointTreeNode> &node) {
+            return node->rel_path == path_part;
+        });
 
-    for (const auto &child : node->children) {
-        removeStorage(child.get(), storage);
+        if (child == node->children.end())
+            throw NoSuchPathException("No such path");
+        else {
+            bool can_remove_node = removeStorage((*child).get(), view);
+            if (can_remove_node)
+                node->children.erase(child);
+        }
     }
+    else {
+        node->storage_vector.clear();
+    }
+
+    return node->storage_vector.empty() && node->children.empty();
 }
 
 std::optional<MountPoint> MountPointTree::getPriorityStorage(const std::string &path) const
@@ -102,6 +118,8 @@ std::optional<MountPoint> MountPointTree::getPriorityStorage(const std::string &
 
     std::optional<std::vector<MountPoint>::iterator> result_iterator; // There is no valid() method on iterator, so..
     MountPointTreeNode* current = m_root.get();
+    std::shared_lock<std::shared_mutex> lock(m_treeMtx);
+
     if (!current->storage_vector.empty())
         result_iterator = std::max_element(current->storage_vector.begin(), current->storage_vector.end());
 

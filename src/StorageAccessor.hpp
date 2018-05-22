@@ -18,17 +18,23 @@ namespace UniversalStorage {
 class StorageAccessor
 {
 public:
+    StorageAccessor() = default;
+    StorageAccessor(StorageAccessor &&o) = default;
+
     template<typename T> T getValue(const std::string &path);
     template<typename T> void setValue(const std::string &path, const T &val);
     void removeValue(const std::string &path);
     void mountPhysicalVolume(IStoragePtr storage,
                              const std::string &mount_point, size_t priority, const std::string &path = "/");
+    void umountVolume(const std::string &path);
 protected:
     template<typename T> void setValueImpl(const std::string &path, const T &val);
 
     MountPointTree m_storageTree;
 };
 
+
+using StorageAccessorPtr = std::shared_ptr<StorageAccessor>;
 
 // Implementation
 
@@ -182,6 +188,12 @@ void StorageAccessor::removeValue(const std::string &path)
         }
         catch (const NoSuchPathException &ex) {}
     }
+}
+
+
+void StorageAccessor::umountVolume(const std::string &path)
+{
+    m_storageTree.removeMountPoint(path);
 }
 
 

@@ -7,33 +7,13 @@
 
 #include <string>
 #include <set>
+#include <shared_mutex>
 
 #include "IStorage.h"
+#include "MountPoint.h"
+#include "PathView.h"
 
 namespace UniversalStorage {
-
-
-struct MountPoint
-{
-    IStoragePtr storage;
-    uint32_t priority;
-    std::string physical_path;
-    std::string mount_path;
-
-
-    MountPoint(IStoragePtr s, std::string _ppath, std::string _mpath, uint32_t p)
-            : storage(std::move(s)), physical_path(std::move(_ppath)), mount_path(std::move(_mpath)), priority(p) {}
-
-
-    bool operator<(const MountPoint &o) const { return priority > o.priority; }
-
-
-    std::string fullPath(const std::string &path) const
-    {
-        std::string result = path;
-        return physical_path + (result.erase(0, mount_path.length()));
-    }
-};
 
 
 class MountPointTree
@@ -41,7 +21,7 @@ class MountPointTree
 public:
     MountPointTree();
     void addMountPoint(const std::string &path, IStoragePtr storage, const std::string &phys_path, size_t priority);
-    void removeMountPoint(IStoragePtr storage);
+    void removeMountPoint(const std::string &path);
     std::optional<MountPoint> getPriorityStorage(const std::string &path) const;
     std::set<MountPoint> getSuitableStorageList(const std::string &path) const;
 
@@ -52,14 +32,14 @@ protected:
         std::vector<MountPoint> storage_vector;
         std::vector<std::shared_ptr<MountPointTreeNode>> children;
 
-
         MountPointTreeNode(std::string path) : rel_path(std::move(path)) {}
     };
 
     MountPointTreeNode *make_node(MountPointTreeNode *current, std::string_view path);
-    void removeStorage(MountPointTreeNode *node, IStoragePtr storage);
+    bool removeStorage(MountPointTreeNode *node, PathView &view);
 
     std::shared_ptr<MountPointTreeNode> m_root;
+    mutable std::shared_mutex m_treeMtx;
 };
 
 }

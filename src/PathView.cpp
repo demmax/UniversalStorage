@@ -7,7 +7,11 @@
 
 using namespace UniversalStorage;
 
-PathView::PathView(std::string_view path) : m_path(path) {}
+PathView::PathView(std::string_view path) : m_path(path)
+{
+    if (m_path.front() != '/')
+        throw BadPathException("No starting '/' in physical_path");
+}
 
 
 std::string_view PathView::next()
@@ -32,8 +36,6 @@ std::string_view PathView::next()
 
 std::string_view PathView::begin()
 {
-    if (m_path.front() != '/')
-        throw BadPathException("No starting '/' in physical_path");
     m_end = 0;
     return m_path.substr(0, 1);
 }
