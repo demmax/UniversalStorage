@@ -8,6 +8,9 @@
 
 #include <vector>
 #include <boost/endian/conversion.hpp>
+#include <queue>
+#include <thread>
+#include <future>
 #include "IStorage.h"
 #include "MountPointTree.h"
 #include "exceptions.h"
@@ -18,19 +21,34 @@ namespace UniversalStorage {
 class StorageAccessor
 {
 public:
-    StorageAccessor() = default;
+    StorageAccessor();
+    ~StorageAccessor();
     StorageAccessor(StorageAccessor &&o) = default;
 
     template<typename T> T getValue(const std::string &path);
-    template<typename T> void setValue(const std::string &path, const T &val);
+    template<typename T> void setValue(const std::string &path, const T &val, std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
     void removeValue(const std::string &path);
     void mountPhysicalVolume(IStoragePtr storage,
                              const std::string &mount_point, size_t priority, const std::string &path = "/");
     void umountVolume(const std::string &path);
 protected:
-    template<typename T> void setValueImpl(const std::string &path, const T &val);
+    template<typename T> void setValueImpl(const std::string &path, const T &val, std::chrono::milliseconds timeout);
+    void timedKeyDestroyerThread();
+
+    struct KeyTimeout
+    {
+        std::string path;
+        std::chrono::steady_clock::time_point timeout;
+        KeyTimeout(std::string s, std::chrono::steady_clock::time_point t) : path(std::move(s)), timeout(std::move(t)) {}
+        bool operator>(const KeyTimeout &o) const { return timeout > o.timeout; }
+    };
 
     MountPointTree m_storageTree;
+    std::priority_queue<KeyTimeout, std::vector<KeyTimeout>, std::greater<>> m_timedKeysQueue;
+    std::mutex m_timedQueueMtx;
+    std::condition_variable m_cv;
+    bool m_exit{false};
+    std::thread m_destroyerThread;
 };
 
 
@@ -40,29 +58,37 @@ using StorageAccessorPtr = std::shared_ptr<StorageAccessor>;
 
 
 template<typename T>
-void StorageAccessor::setValue(const std::string &path, const T &val)
+void StorageAccessor::setValue(const std::string &path, const T &val, std::chrono::milliseconds timeout)
 {
     if constexpr (std::is_array_v<T> && std::is_same_v<std::decay_t<T>, char*>) {
         // Implicit char array casting to avoid 'function returning an array' error from sfinae templates
-        setValueImpl(path, static_cast<const char*>(val));
+        setValueImpl(path, static_cast<const char*>(val), timeout);
     }
     else if constexpr (TypeTraits::can_serialize<T>::value && TypeTraits::can_deserialize<T>::value) {
         if constexpr (TypeTraits::has_serialize_method<T>::value)
-            setValueImpl(path, val.serialize());
+            setValueImpl(path, val.serialize(), timeout);
         else
-            setValueImpl(path, TypeTraits::serialize<T>(val));
+            setValueImpl(path, TypeTraits::serialize<T>(val), timeout);
     } else {
         static_assert(!std::is_pointer_v<T> || std::is_same_v<T, const char *> || std::is_same_v<T, char *>,
                       "Non-pointer type or NULL-terminated string expected");
         static_assert(std::is_trivially_copy_constructible_v<T> || std::is_same_v<T, std::string>,
                       "Only trivially-copy-constructible types may be stored (or implement serialize/deserialize methods)");
-        setValueImpl(path, val);
+        setValueImpl(path, val, timeout);
+    }
+
+    if (timeout != std::chrono::milliseconds::zero()) {
+        {
+            std::unique_lock<std::mutex> lock(m_timedQueueMtx);
+            m_timedKeysQueue.emplace(path, std::chrono::steady_clock::now() + timeout);
+        }
+        m_cv.notify_one();
     }
 }
 
 
 template<typename T>
-void StorageAccessor::setValueImpl(const std::string &path, const T &val)
+void StorageAccessor::setValueImpl(const std::string &path, const T &val, std::chrono::milliseconds timeout)
 {
 
     std::optional<MountPoint> mounted = m_storageTree.getPriorityStorage(path);
@@ -78,7 +104,7 @@ void StorageAccessor::setValueImpl(const std::string &path, const T &val)
 }
 
 template<>
-void StorageAccessor::setValueImpl<std::vector<uint8_t>>(const std::string &path, const std::vector<uint8_t> &vec)
+void StorageAccessor::setValueImpl<std::vector<uint8_t>>(const std::string &path, const std::vector<uint8_t> &vec, std::chrono::milliseconds timeout)
 {
 
     std::optional<MountPoint> mounted = m_storageTree.getPriorityStorage(path);
@@ -90,14 +116,14 @@ void StorageAccessor::setValueImpl<std::vector<uint8_t>>(const std::string &path
 
 
 template<>
-void StorageAccessor::setValue<std::vector<uint8_t>>(const std::string &path, const std::vector<uint8_t> &val)
+void StorageAccessor::setValue<std::vector<uint8_t>>(const std::string &path, const std::vector<uint8_t> &val, std::chrono::milliseconds timeout)
 {
-    setValueImpl(path, val);
+    setValueImpl(path, val, timeout);
 }
 
 
 template<>
-void StorageAccessor::setValueImpl<std::string>(const std::string &path, const std::string &str)
+void StorageAccessor::setValueImpl<std::string>(const std::string &path, const std::string &str, std::chrono::milliseconds timeout)
 {
 
     std::optional<MountPoint> mounted = m_storageTree.getPriorityStorage(path);
@@ -195,6 +221,44 @@ void StorageAccessor::umountVolume(const std::string &path)
 {
     m_storageTree.removeMountPoint(path);
 }
+
+
+void StorageAccessor::timedKeyDestroyerThread()
+{
+    while (!m_exit) {
+        std::unique_lock<std::mutex> lock(m_timedQueueMtx);
+        if (m_timedKeysQueue.empty())
+            m_cv.wait(lock);
+        else
+            m_cv.wait_until(lock, m_timedKeysQueue.top().timeout);
+
+        if (m_exit)
+            break;
+
+        if (m_timedKeysQueue.empty())
+            continue;
+
+        auto now = std::chrono::steady_clock::now();
+        while (!m_timedKeysQueue.empty() && now > m_timedKeysQueue.top().timeout) {
+            auto key = m_timedKeysQueue.top().path;
+            m_timedKeysQueue.pop();
+            removeValue(key);
+        }
+    }
+}
+
+
+StorageAccessor::StorageAccessor() : m_destroyerThread(std::thread(&StorageAccessor::timedKeyDestroyerThread, this))
+{
+}
+
+
+StorageAccessor::~StorageAccessor()
+{
+    m_exit = true;
+    m_cv.notify_one();
+    m_destroyerThread.join();
+};
 
 
 }

@@ -2,6 +2,7 @@
 // Created by maxon on 30.04.18.
 //
 
+#include <exceptions.h>
 #include "MemoryStorage.h"
 
 
@@ -18,7 +19,12 @@ void MemoryStorage::setValue(const std::string &path, const std::vector<uint8_t>
 
 std::vector<uint8_t> MemoryStorage::getValue(const std::string &path) const
 {
-    return m_dataMap.at(path);
+    try {
+        return m_dataMap.at(path);
+    }
+    catch (...) {
+        throw NoSuchPathException("no such path");
+    }
 }
 
 void MemoryStorage::removeValue(const std::string &path)

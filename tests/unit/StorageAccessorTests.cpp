@@ -9,6 +9,7 @@
 #include <NaiveStorage.h>
 #include <numeric>
 #include <StorageAccessor.hpp>
+#include <thread>
 
 using namespace UniversalStorage;
 
@@ -186,4 +187,21 @@ TEST(StorageAccessorFunctionality, CustomTypeWithFreeFunctionsTest)
     auto s = accessor->getValue<decltype(val)>(path);
 
     EXPECT_EQ(s.counter, 6);
+}
+
+
+TEST(StorageAccessorFunctionality, KeyTimeoutExistBeforeTest)
+{
+    auto accessor = makeSimpleAccessor();
+    accessor->setValue("/", 42, std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(900));
+    EXPECT_EQ(accessor->getValue<int>("/"), 42);
+}
+
+TEST(StorageAccessorFunctionality, KeyTimeoutNotExistAfterTest)
+{
+    auto accessor = makeSimpleAccessor();
+    accessor->setValue("/", 42, std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    EXPECT_THROW(accessor->getValue<int>("/"), NoSuchPathException);
 }
