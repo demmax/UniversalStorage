@@ -56,6 +56,7 @@ namespace UniversalStorage {
         template <typename T>
         struct has_serialize_spec<T, std::void_t<has_serilize_t<T>>> { static constexpr bool value = true; };
 
+
         // Check if where is specialization of method deserialize for given T
         template <class T>
         using has_deserilize_t = decltype(deserialize<T>(std::declval<const std::vector<uint8_t>&>()));

@@ -7,8 +7,9 @@ set(SOURCES
         MountPointTreeTest.cpp
         PathViewTest.cpp
         NaiveStorageTest.cpp
-        LRUCachingProxyStorageTest.cpp)
+        LRUCachingProxyStorageTest.cpp
+        PhysicalStorageTest.cpp)
 
-set(LIBS ${PROJECT_NAME} ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+set(LIBS ${PROJECT_NAME} ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
 add_executable(${TestName} ${SOURCES} ${MOCKS})
 target_link_libraries(${TestName} ${LIBS})

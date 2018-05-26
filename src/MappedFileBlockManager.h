@@ -5,11 +5,18 @@
 #ifndef UNIVERSALSTORAGE_MAPPEDFILEBLOCKMANAGER_H
 #define UNIVERSALSTORAGE_MAPPEDFILEBLOCKMANAGER_H
 
+#include "IBlockManager.h"
 
-class MappedFileBlockManager
+
+namespace UniversalStorage {
+
+
+class MappedFileBlockManager : public IBlockManager
 {
-
+public:
+    uint8_t *getFreeBlock() override;
 };
 
+}
 
 #endif //UNIVERSALSTORAGE_MAPPEDFILEBLOCKMANAGER_H
