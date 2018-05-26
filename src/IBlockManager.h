@@ -1,0 +1,15 @@
+//
+// Created by maxon on 26.05.18.
+//
+
+#ifndef UNIVERSALSTORAGE_IBLOCKMANAGER_H
+#define UNIVERSALSTORAGE_IBLOCKMANAGER_H
+
+
+class IBlockManager
+{
+
+};
+
+
+#endif //UNIVERSALSTORAGE_IBLOCKMANAGER_H

@@ -1,0 +1,15 @@
+//
+// Created by maxon on 26.05.18.
+//
+
+#ifndef UNIVERSALSTORAGE_PHYSICALSTORAGE_H
+#define UNIVERSALSTORAGE_PHYSICALSTORAGE_H
+
+
+class PhysicalStorage
+{
+
+};
+
+
+#endif //UNIVERSALSTORAGE_PHYSICALSTORAGE_H

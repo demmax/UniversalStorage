@@ -1,0 +1,15 @@
+//
+// Created by maxon on 26.05.18.
+//
+
+#ifndef UNIVERSALSTORAGE_STORAGEALLOCATOR_H
+#define UNIVERSALSTORAGE_STORAGEALLOCATOR_H
+
+
+class StorageAllocator
+{
+
+};
+
+
+#endif //UNIVERSALSTORAGE_STORAGEALLOCATOR_H
