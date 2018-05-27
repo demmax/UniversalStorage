@@ -15,12 +15,12 @@ set(PERFORMANCE_BIN_NAME PerformanceTest)
 set(LIBS ${PROJECT_NAME} ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(${BASE_BIN_NAME} ${FIXTURE_SRC} ${BASE_SRC} ${MOCKS})
-target_link_libraries(${BASE_BIN_NAME} ${LIBS})
+target_link_libraries(${BASE_BIN_NAME} ${LIBS} ${Boost_LIBRARIES})
 
 
 add_executable(${THREAD_BIN_NAME} ${FIXTURE_SRC} ${THREADING_SRC} ${MOCKS})
-target_link_libraries(${THREAD_BIN_NAME} ${LIBS} ${Threads})
+target_link_libraries(${THREAD_BIN_NAME} ${LIBS} ${Threads} ${Boost_LIBRARIES})
 
 
 add_executable(${PERFORMANCE_BIN_NAME} ${FIXTURE_SRC} ${PERFORMANCE_SRC} ${MOCKS})
-target_link_libraries(${PERFORMANCE_BIN_NAME} ${LIBS} ${Threads})
+target_link_libraries(${PERFORMANCE_BIN_NAME} ${LIBS} ${Threads} ${Boost_LIBRARIES} )
