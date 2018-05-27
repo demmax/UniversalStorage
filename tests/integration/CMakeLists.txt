@@ -4,7 +4,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/tests)
 
 set(FIXTURE_SRC UniversalStorageFixture.hpp)
-set(BASE_SRC BaseFunctionalityTest.cpp PerformanceTest.cpp)
+set(BASE_SRC BaseFunctionalityTest.cpp PerformanceTest.cpp ../mocks/MockBlockManager.h)
 set(THREADING_SRC MultithreadingTest.cpp)
 set(PERFORMANCE_SRC PerformanceTest.cpp)
 

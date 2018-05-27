@@ -13,7 +13,8 @@ namespace UniversalStorage {
 class IBlockManager
 {
 public:
-    virtual uint8_t* getFreeBlock() = 0;
+    virtual uint8_t *getFreeBlock() = 0;
+    virtual uint8_t *getRootBlock() = 0;
     virtual ~IBlockManager() = default;
 };
 

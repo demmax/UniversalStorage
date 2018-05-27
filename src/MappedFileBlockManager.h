@@ -14,6 +14,7 @@ namespace UniversalStorage {
 class MappedFileBlockManager : public IBlockManager
 {
 public:
+    uint8_t *getRootBlock() override;
     uint8_t *getFreeBlock() override;
 };
 

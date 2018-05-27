@@ -6,167 +6,370 @@
 #include "exceptions.h"
 #include <cstring>
 #include <boost/endian/conversion.hpp>
+#include <iostream>
 
 using namespace UniversalStorage;
 
 
-BPTree::BPTree(IBlockManagerPtr blockManager, BPTree::pointer begin)
-        : m_blockManager(std::move(blockManager)), m_root(begin)
-{
+#ifdef DEBUG_ASSERT
+#define DEBUG_ASSERT_INVARIANTS assertInvariants(m_root)
+#else
+#define DEBUG_ASSERT_INVARIANTS
+#endif
 
+
+
+BPTree::BPTree(IBlockManagerPtr blockManager) : m_blockManager(std::move(blockManager))
+{
+    m_root = std::make_shared<BTreeNode>();
+    m_root->offset = 0;
 }
 
 
-void BPTree::addKey(uint64_t key, uint64_t data_off)
+BPTree::~BPTree()
 {
-    pointer new_sibling = internalAddKey(key, data_off, m_root);
-    if (new_sibling) { // Move root to new place & add fill it by new pointers
-        pointer to_move = m_blockManager->getFreeBlock();
-        std::memcpy(to_move, m_root, MAX_NODE_SIZE);
-
-        uint8_t left_items_count = to_move[CHILD_COUNT_OFFSET];
-        uint64_t max_left_key = retrieveData(to_move, left_items_count);
-        uint8_t new_items_count  = new_sibling[CHILD_COUNT_OFFSET];
-        uint64_t max_new_key  = retrieveData(new_sibling, new_items_count);
+}
 
 
-        m_root[IS_LEAF_OFFSET] = 0;
-        m_root[CHILD_COUNT_OFFSET] = 2;
+void BPTree::clearNode(BTreeNodePtr node)
+{
+}
 
-        // New sibling always bigger
-        auto data_ptr = reinterpret_cast<uint64_t*>(m_root + DATA_OFFSET);
-        *data_ptr = max_left_key; ++data_ptr;
-        *data_ptr = getOffsetByPointer(to_move); ++data_ptr;
-        *data_ptr = max_new_key; ++data_ptr;
-        *data_ptr = getOffsetByPointer(new_sibling);
+
+void BPTree::addKey(uint64_t key, uint64_t data, bool is_data)
+{
+    data_type real_data{.data = data, .is_data = is_data};
+    auto sibling = internalAddData(m_root, key, real_data);
+    if (sibling) {  // Move root to new place & add fill it by new pointers
+        auto new_node = std::make_shared<BTreeNode>();
+        std::swap(*m_root, *new_node);
+        m_root->is_leaf = false;
+
+        auto max_left_key = new_node->data_vector.back().key;
+        auto max_new_key = sibling->data_vector.back().key;
+        m_root->data_vector.emplace_back(DataItem(max_left_key, new_node));
+        m_root->data_vector.emplace_back(DataItem(max_new_key, sibling));
+        new_node->right_sibling = sibling;
+        sibling->left_sibling = new_node;
     }
+
+    DEBUG_ASSERT_INVARIANTS;
 }
 
-struct TreeNode
+
+BTreeNodePtr BPTree::internalAddData(BTreeNodePtr node, uint64_t key, data_type data)
 {
-    bool is_leaf;
-    bool is_direct_data;
-    uint8_t data_count;
-
-    uint64_t keys_and_data;
-
-    uint64_t data;
-
-    uint64_t childrens; // all other place;
-};
-
-
-BPTree::pointer BPTree::internalAddKey(uint64_t key, uint64_t data, BPTree::pointer node)
-{
-    bool is_leaf = node[IS_LEAF_OFFSET];
-    uint8_t &data_count = node[CHILD_COUNT_OFFSET];
-
-    if (is_leaf) {
-        if (data_count < (MAX_CHILD_COUNT - 1)) {
-            insertData(key, data, node + DATA_OFFSET);
-            ++data_count;
+    if (node->is_leaf) {
+        if (node->data_vector.size() < MAX_LOAD_FACTOR - 1) {
+            insertData(node, key, data);
             return nullptr;
         }
-        else { // Node full. Need splitting.
-            return splitWithSibling(node, key, data);
+        else {
+            return makeSibling(node, key, data);
         }
     }
     else {
-        uint8_t  child_index = findPosition(key, node + DATA_OFFSET, data_count);
-        pointer  child_key_offset_ptr = node + DATA_OFFSET + (child_index * DATA_ITEM_SIZE);
-        pointer  child_offset_ptr =  child_key_offset_ptr + KEY_SIZE;
-        uint64_t child_offset = retrieveData(child_offset_ptr);
-        pointer  child = getPointerByOffset(child_offset);
+        auto it = std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key);
+        if (it == node->data_vector.end())
+            it = std::prev(it);
+        BTreeNodePtr child = getPtr((*it).data);
+        auto sibling = internalAddData(child, key, data);
+        (*it).key = child->data_vector.back().key;
 
-        pointer new_sibling = internalAddKey(key, data, child);
-        if (!new_sibling)
+        if (!sibling) {
             return nullptr;
+        }
 
         // Children was splitted. Need add new child & update values
-        uint8_t left_items_count = child[CHILD_COUNT_OFFSET];
-        uint8_t new_items_count  = new_sibling[CHILD_COUNT_OFFSET];
-        uint64_t max_left_key = retrieveData(child, left_items_count);
-        uint64_t max_new_key  = retrieveData(new_sibling, new_items_count);
-
-        auto *child_key = reinterpret_cast<uint64_t*>(child_key_offset_ptr);
-        *child_key = boost::endian::native_to_little(max_left_key);
-
-        if (data_count < (MAX_CHILD_COUNT - 1)) {
-            pointer new_sibling_key_offset_ptr = child_key_offset_ptr + DATA_ITEM_SIZE;
-            auto sibling_data = reinterpret_cast<uint64_t*>(new_sibling_key_offset_ptr);
-            *sibling_data = boost::endian::native_to_little(max_new_key);
-            ++sibling_data;
-            *sibling_data = boost::endian::native_to_little(getOffsetByPointer(new_sibling));
+        auto max_left_key = child->data_vector.back().key;
+        auto max_sibling_key = sibling->data_vector.back().key;
+        if (node->data_vector.size() < MAX_LOAD_FACTOR - 1) {
+            (*it).key = max_left_key;
+            node->data_vector.insert(std::next(it), DataItem(max_sibling_key, sibling));
+//            insertData(node, max_sibling_key, sibling);
+            return nullptr;
         }
         else { // Can't add. Need splitting too.
-            return splitWithSibling(node, max_new_key, getOffsetByPointer(new_sibling));
+            return makeSibling(node, max_sibling_key, sibling);
         }
     }
 }
 
 
-void BPTree::insertData(uint64_t key, uint64_t data, BPTree::pointer data_ptr)
+
+void BPTree::insertData(BTreeNodePtr node, uint64_t key, const std::any &data)
 {
-    auto ptr = reinterpret_cast<uint64_t*>(data_ptr);
-    *ptr = boost::endian::native_to_little(key);
-    ++ptr;
-    *ptr = boost::endian::native_to_little(data);
+    node->data_vector.insert(
+            std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key),
+            DataItem(key, data)
+    );
 }
 
 
-uint8_t BPTree::findPosition(uint64_t key, BPTree::pointer data_ptr, uint8_t data_count)
+BTreeNodePtr BPTree::makeSibling(BTreeNodePtr node, uint64_t key, const std::any &data)
 {
-    for (uint8_t pos = 0; pos < data_count; pos++) {
-        auto current_key = reinterpret_cast<uint64_t*>(data_ptr);
-        if (key <= boost::endian::little_to_native(*current_key))
-            return pos;
+    auto sibling = std::make_shared<BTreeNode>();
+    sibling->is_leaf = node->is_leaf;
+    uint8_t to_move = MAX_LOAD_FACTOR / 2;
+    auto index = std::distance(node->data_vector.begin(), std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key));
+    if (index < to_move)
+        --to_move;
+
+    sibling->data_vector.insert(
+            sibling->data_vector.end(),
+            std::make_move_iterator(node->data_vector.begin() + to_move),
+            std::make_move_iterator(node->data_vector.end())
+    );
+    node->data_vector.erase(node->data_vector.begin() + to_move, node->data_vector.end());
+    insertData(index >= to_move ? sibling : node, key, data);
+    if (node->right_sibling) {
+        node->right_sibling->left_sibling = sibling;
+        sibling->right_sibling = node->right_sibling;
     }
-    return data_count;
-}
-
-
-uint64_t BPTree::retrieveData(BPTree::pointer data_ptr) const
-{
-    auto data = reinterpret_cast<uint64_t*>(data_ptr);
-    return boost::endian::little_to_native(*data);
-}
-
-
-uint64_t BPTree::retrieveData(BPTree::pointer node, uint8_t index) const
-{
-    return retrieveData(node + DATA_OFFSET + (index * DATA_ITEM_SIZE));
-}
-
-
-BPTree::pointer BPTree::splitWithSibling(BPTree::pointer node, uint64_t key, uint64_t data)
-{
-    uint8_t &data_count = node[CHILD_COUNT_OFFSET];
-    pointer sibling = m_blockManager->getFreeBlock();
-    sibling[IS_LEAF_OFFSET] = node[IS_LEAF_OFFSET];
-
-    uint8_t pos_to_insert = findPosition(key, node + DATA_OFFSET, data_count);
-    uint8_t move_position = MIDDLE_POSITION;
-    bool is_data_in_sibling = pos_to_insert >= MIDDLE_POSITION;
-    if (is_data_in_sibling) { // New data will in sibling. Move smaller part.
-        ++move_position;
-    }
-    uint8_t move_bytes_count = (MAX_CHILD_COUNT - move_position) * DATA_ITEM_SIZE;
-    std::memmove(sibling + DATA_OFFSET, node + DATA_OFFSET + move_position, move_bytes_count);
-
-    insertData(key, data, is_data_in_sibling ? sibling : node);
-    data_count = MIDDLE_POSITION;
-
+    sibling->left_sibling = node;
+    node->right_sibling = sibling;
     return sibling;
 }
 
 
-BPTree::pointer BPTree::getPointerByOffset(uint64_t offset) const
+std::vector<data_type> BPTree::getValue(uint64_t key)
 {
-    return m_root + offset;
+    BTreeNodePtr node = getChildWithKey(m_root, key);
+    if (node->is_leaf) {
+        auto it = std::find_if(node->data_vector.begin(), node->data_vector.end(), [&](auto data) { return data.key == key; });
+        if (it == node->data_vector.end())
+            throw NoSuchPathException(std::to_string(key).c_str());
+
+        std::vector<data_type> result;
+        result.push_back(getData((*it).data));
+        while ((it = std::next(it)) != node->data_vector.end() && (*it).key == key) {
+            result.push_back(getData((*it).data));
+        }
+
+
+        if (it == node->data_vector.end()) { // Need check sibling
+            while (node->right_sibling) {
+                node = node->right_sibling;
+                it = node->data_vector.begin();
+                while (it != node->data_vector.end() && (*it).key == key) {
+                    result.push_back(getData((*it).data));
+                    ++it;
+                }
+
+                if (it != node->data_vector.end())
+                    break;
+            }
+        }
+        return result;
+    }
+    throw StorageException((std::string(__func__) + "Something goes completely wrong").c_str());
 }
 
 
-uint64_t BPTree::getOffsetByPointer(BPTree::pointer ptr) const
+void BPTree::removeKey(uint64_t key)
 {
-    return ptr - m_root;
+    internalRemoveData(m_root, key);
+    DEBUG_ASSERT_INVARIANTS;
 }
+
+
+BTreeNodePtr BPTree::getChildWithKey(BTreeNodePtr node, uint64_t key)
+{
+    auto it = std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key);
+    if (it == node->data_vector.end())
+        throw NoSuchPathException(std::to_string(key).c_str());
+
+    BTreeNodePtr child = getPtr((*it).data);
+    if (child->is_leaf)
+        return child;
+    return getChildWithKey(child, key);
+}
+
+
+BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key)
+{
+    if (node->is_leaf) {
+        auto del_it = std::find_if(node->data_vector.begin(), node->data_vector.end(), [&](auto data) { return data.key == key; });
+        if (del_it == node->data_vector.end())
+            throw NoSuchPathException(std::to_string(key).c_str());
+
+        node->data_vector.erase(del_it);
+        if (node->data_vector.size() >= MIN_LOAD_FACTOR) {
+            return REMOVE_OK;
+        }
+        else { // Need merge with sibling
+            return mergeWithSibling(node);
+        }
+    }
+    else { // Not a leaf. Search suitable subtree.
+        auto child_it = std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key);
+        if (child_it == node->data_vector.end())
+            throw NoSuchPathException(std::to_string(key).c_str());
+
+        BTreeNodePtr child = getPtr((*child_it).data);
+        RemoveStatus status = internalRemoveData(child, key);
+        if (status == REMOVE_OK) {
+            (*child_it).key = child->data_vector.back().key;
+            return REMOVE_OK;
+        }
+
+        if (status == REMOVE_MERGED) {
+            if (node->left_sibling && node->left_sibling->data_vector.empty()) {
+                node->data_vector.erase(std::prev(child_it));
+            }
+            else { // Definitely exist, because successfully merged
+                node->data_vector.erase(std::next(child_it));
+            }
+
+            if (node->data_vector.size() >= MIN_LOAD_FACTOR) {
+                return REMOVE_OK;
+            }
+            else {
+                return mergeWithSibling(node);
+            }
+        }
+
+        if (status == CANT_MERGE) { // Subtree empty. Move child up.
+            std::swap(*node, *child);
+            return CANT_MERGE;
+        }
+    }
+
+    throw StorageException((std::string(__func__) + ":  something goes completely wrong (" + std::to_string(key) + ")").c_str());
+}
+
+
+BPTree::RemoveStatus BPTree::mergeWithSibling(BTreeNodePtr node)
+{
+    BTreeNodePtr sibling = nullptr;
+    if (node->left_sibling && node->left_sibling->data_vector.size() > MIN_LOAD_FACTOR) {
+        sibling = node->left_sibling;
+    }
+    else if (node->right_sibling) {
+        sibling = node->right_sibling;
+    }
+
+    if (sibling == nullptr)
+        return CANT_MERGE;
+
+    if (sibling->data_vector.size() > MIN_LOAD_FACTOR) {
+        node->data_vector.push_back(sibling->data_vector.front());
+        sibling->data_vector.erase(sibling->data_vector.begin());
+        return REMOVE_OK;
+    }
+    else { // Sibling hasn't enough nodes too. Merge them.
+        std::copy(sibling->data_vector.begin(), sibling->data_vector.end(), std::back_inserter(node->data_vector));
+        if (sibling == node->left_sibling) {
+            node->left_sibling = sibling->left_sibling;
+            if (node->left_sibling)
+                node->left_sibling->right_sibling = node;
+        }
+        else {
+            node->right_sibling = sibling->right_sibling;
+            if (node->right_sibling)
+                node->right_sibling->left_sibling = node;
+        }
+        return REMOVE_MERGED;
+    }
+}
+
+
+void BPTree::assertInvariants(BTreeNodePtr node)
+{
+    if (node != m_root) {
+        assert(node->data_vector.size() >= MIN_LOAD_FACTOR && node->data_vector.size() < MAX_LOAD_FACTOR);
+    }
+    else {
+        assert(node->data_vector.size() >= 0 && node->data_vector.size() < MAX_LOAD_FACTOR);
+    }
+
+    for (auto i = 1u; i < node->data_vector.size(); ++i) {
+        assert(node->data_vector[i].key >= node->data_vector[i - 1].key);
+        if (!node->is_leaf) {
+            auto child = getPtr(node->data_vector[i].data).get();
+            assert(child->data_vector.back().key == node->data_vector[i].key);
+        }
+    }
+
+    if (!node->is_leaf) {
+        auto old_child = getPtr(node->data_vector[0].data);
+        assertInvariants(old_child);
+        for (auto i = 1u; i < node->data_vector.size(); ++i) {
+            auto child = getPtr(node->data_vector[i].data);
+            assert(old_child->right_sibling == child);
+            assert(child->left_sibling == old_child);
+            assertInvariants(child);
+            old_child = child;
+        }
+    }
+
+}
+
+
+data_type BPTree::getData(const std::any &var)
+{
+    return std::any_cast<data_type>(var);
+}
+
+
+BTreeNodePtr BPTree::getPtr(const std::any &var)
+{
+    return std::any_cast<BTreeNodePtr>(var);
+}
+
+
+void BPTree::sync()
+{
+
+}
+
+void BPTree::init()
+{
+    uint8_t* root_ptr = m_blockManager->getRootBlock();
+    m_root = makeNodeFromData(root_ptr, 0);
+}
+
+
+BTreeNodePtr BPTree::makeNodeFromData(uint8_t *base, uint64_t offset)
+{
+    auto node = std::make_shared<BTreeNode>();
+
+    uint8_t *node_ptr = base + offset;
+    node->is_leaf = node_ptr[IS_LEAF_OFFSET];
+    node->offset = offset;
+    uint8_t data_count = node_ptr[DATA_COUNT_OFFSET];
+    uint64_t left_sibling = node_ptr[LEFT_SIBLING_OFFSET];
+    uint64_t right_sibling = node_ptr[RIGHT_SIBLING_OFFSET];
+
+    if (node->is_leaf) {
+        for (auto i = 0; i < data_count; i++) {
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+            uint64_t key = *(reinterpret_cast<uint64_t*>(ptr));
+            ptr += KEY_SIZE;
+            uint64_t data = *(reinterpret_cast<uint64_t*>(ptr));
+            ptr += DATA_SIZE;
+            uint8_t is_data = *ptr;
+
+            node->data_vector.emplace_back(DataItem(key, RealData{.data = data, .is_data = is_data}));
+        }
+    }
+    else {
+        for (auto i = 0; i < data_count; i++) {
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+            uint64_t key = *(reinterpret_cast<uint64_t*>(ptr));
+            ptr += KEY_SIZE;
+            uint64_t child_offset = *(reinterpret_cast<uint64_t*>(ptr));
+
+            auto child = makeNodeFromData(base, child_offset);
+            node->data_vector.emplace_back(DataItem(key, child));
+        }
+    }
+
+    if (left_sibling)
+        node->left_sibling  = makeNodeFromData(base, left_sibling);
+    if (right_sibling)
+        node->right_sibling = makeNodeFromData(base, right_sibling);
+
+    return node;
+}
+

@@ -44,7 +44,7 @@ TEST(NaiveStorageTest, ConnectingToStorageSetGetCase)
 
     {
         NaiveStorage storage(file_name);
-        for (int i = 0; i < count; i++) {
+        for (auto i = 0u; i < count; i++) {
             std::vector v = vec;
             v.push_back(i);
             storage.setValue(path + std::to_string(i), v);
@@ -53,7 +53,7 @@ TEST(NaiveStorageTest, ConnectingToStorageSetGetCase)
 
     {
         NaiveStorage storage(file_name);
-        for (size_t i = 0; i < count; i++) {
+        for (size_t i = 0u; i < count; i++) {
             auto expected_vec = vec;
             expected_vec.push_back(i % 256);
             EXPECT_EQ(storage.getValue(path + std::to_string(i)), expected_vec);
