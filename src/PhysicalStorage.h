@@ -7,6 +7,7 @@
 
 #include "IStorage.h"
 #include "BPTree.h"
+#include "IBlockManager.h"
 
 
 namespace UniversalStorage {
@@ -21,7 +22,17 @@ public:
     bool isExist(const std::string &path) const override;
 
 protected:
-    BPTree btree;
+    uint8_t *storeData(const std::vector<uint8_t> &data, uint64_t offset);
+    uint64_t storeDataInNewBlock(const uint8_t *data, size_t data_size);
+    std::string getStringFromPathOffset(uint64_t offset) const;
+    std::vector<uint8_t> getDataFromOffset(uint64_t offset) const;
+    uint64_t hash(const std::string &str) const;
+    uint64_t packVector(const std::vector<uint8_t> &vec) const;
+    std::vector<uint8_t> unpackValue(uint64_t data) const;
+
+
+    BPTree m_btree;
+    IBlockManagerPtr m_blockManager;
 };
 
 }

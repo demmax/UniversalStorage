@@ -10,6 +10,7 @@
 
 using namespace UniversalStorage;
 
+#define DEBUG_ASSERT
 
 #ifdef DEBUG_ASSERT
 #define DEBUG_ASSERT_INVARIANTS assertInvariants(m_root)
@@ -36,9 +37,9 @@ void BPTree::clearNode(BTreeNodePtr node)
 }
 
 
-void BPTree::addKey(uint64_t key, uint64_t data, bool is_data)
+void BPTree::addKey(uint64_t key, uint64_t data, uint64_t path_off, bool is_data)
 {
-    data_type real_data{.data = data, .is_data = is_data};
+    data_type real_data{.data = data, .path_offset = path_off, .is_data = is_data};
     auto sibling = internalAddData(m_root, key, real_data);
     if (sibling) {  // Move root to new place & add fill it by new pointers
         auto new_node = std::make_shared<BTreeNode>();
@@ -132,7 +133,7 @@ BTreeNodePtr BPTree::makeSibling(BTreeNodePtr node, uint64_t key, const std::any
 }
 
 
-std::vector<data_type> BPTree::getValue(uint64_t key)
+std::vector<data_type> BPTree::getValues(uint64_t key) const
 {
     BTreeNodePtr node = getChildWithKey(m_root, key);
     if (node->is_leaf) {
@@ -166,34 +167,58 @@ std::vector<data_type> BPTree::getValue(uint64_t key)
 }
 
 
-void BPTree::removeKey(uint64_t key)
+void BPTree::removeKey(uint64_t key, uint64_t path_offset)
 {
-    internalRemoveData(m_root, key);
+    RemoveStatus status = internalRemoveData(m_root, key, path_offset);
     DEBUG_ASSERT_INVARIANTS;
+    if (status == NEED_SIBLING)
+        throw NoSuchPathException((std::to_string(key) + " (" + std::to_string(path_offset) +")").c_str());
 }
 
 
-BTreeNodePtr BPTree::getChildWithKey(BTreeNodePtr node, uint64_t key)
+BTreeNodePtr BPTree::getChildWithKey(BTreeNodePtr node, uint64_t key) const
 {
     auto it = std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key);
     if (it == node->data_vector.end())
         throw NoSuchPathException(std::to_string(key).c_str());
 
-    BTreeNodePtr child = getPtr((*it).data);
-    if (child->is_leaf)
-        return child;
+    if (node->is_leaf)
+        return node;
+
+    auto child = getPtr((*it).data);
     return getChildWithKey(child, key);
 }
 
 
-BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key)
+BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key, uint64_t path_offset)
 {
     if (node->is_leaf) {
         auto del_it = std::find_if(node->data_vector.begin(), node->data_vector.end(), [&](auto data) { return data.key == key; });
         if (del_it == node->data_vector.end())
-            throw NoSuchPathException(std::to_string(key).c_str());
+            throw NoSuchPathException((std::to_string(key) + " (" + std::to_string(path_offset) +")").c_str());
 
-        node->data_vector.erase(del_it);
+        bool is_removed = false;
+        // Keys may be same, so need search in siblings too.
+        while (del_it != node->data_vector.end()) {
+            if (getData((*del_it).data).path_offset == path_offset) {
+                node->data_vector.erase(del_it);
+                is_removed = true;
+                break;
+            }
+
+            if (++del_it != node->data_vector.end() && (*del_it).key != key)
+                throw NoSuchPathException((std::to_string(key) + " (" + std::to_string(path_offset) +")").c_str());
+        }
+
+        if (!is_removed)
+            return NEED_SIBLING;
+
+//        if (del_it == node->data_vector.end()) {
+//            if (node->data_vector.empty()) // Last element case.
+//                return REMOVE_OK;
+//            return NEED_SIBLING;
+//        }
+
         if (node->data_vector.size() >= MIN_LOAD_FACTOR) {
             return REMOVE_OK;
         }
@@ -204,17 +229,25 @@ BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key)
     else { // Not a leaf. Search suitable subtree.
         auto child_it = std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key);
         if (child_it == node->data_vector.end())
-            throw NoSuchPathException(std::to_string(key).c_str());
+            throw NoSuchPathException((std::to_string(key) + " (" + std::to_string(path_offset) +")").c_str());
 
-        BTreeNodePtr child = getPtr((*child_it).data);
-        RemoveStatus status = internalRemoveData(child, key);
+        BTreeNodePtr child;
+        RemoveStatus status;
+
+        do {
+            child = getPtr((*child_it).data);
+            status = internalRemoveData(child, key, path_offset);
+            if (status == NEED_SIBLING && ++child_it == node->data_vector.end())
+                return NEED_SIBLING;
+        } while (status == NEED_SIBLING);
+
         if (status == REMOVE_OK) {
             (*child_it).key = child->data_vector.back().key;
             return REMOVE_OK;
         }
 
         if (status == REMOVE_MERGED) {
-            if (node->left_sibling && node->left_sibling->data_vector.empty()) {
+            if (node->left_sibling != node->left_sibling->data_vector.empty()) {
                 node->data_vector.erase(std::prev(child_it));
             }
             else { // Definitely exist, because successfully merged
@@ -281,6 +314,12 @@ void BPTree::assertInvariants(BTreeNodePtr node)
     }
     else {
         assert(node->data_vector.size() >= 0 && node->data_vector.size() < MAX_LOAD_FACTOR);
+        if (!node->data_vector.empty()) {
+            auto child = getChildWithKey(m_root, 0);
+            assert(!child->left_sibling);
+            child = getChildWithKey(m_root, m_root->data_vector.back().key);
+            assert(!child->right_sibling);
+        }
     }
 
     for (auto i = 1u; i < node->data_vector.size(); ++i) {
@@ -302,28 +341,27 @@ void BPTree::assertInvariants(BTreeNodePtr node)
             old_child = child;
         }
     }
-
 }
 
 
-data_type BPTree::getData(const std::any &var)
+data_type BPTree::getData(const std::any &var) const
 {
     return std::any_cast<data_type>(var);
 }
 
 
-BTreeNodePtr BPTree::getPtr(const std::any &var)
+BTreeNodePtr BPTree::getPtr(const std::any &var) const
 {
     return std::any_cast<BTreeNodePtr>(var);
 }
 
 
-void BPTree::sync()
-{
+//void BPTree::sync()
+//{
+//
+//}
 
-}
-
-void BPTree::init()
+void BPTree::load()
 {
     uint8_t* root_ptr = m_blockManager->getRootBlock();
     m_root = makeNodeFromData(root_ptr, 0);
@@ -348,9 +386,13 @@ BTreeNodePtr BPTree::makeNodeFromData(uint8_t *base, uint64_t offset)
             ptr += KEY_SIZE;
             uint64_t data = *(reinterpret_cast<uint64_t*>(ptr));
             ptr += DATA_SIZE;
+            uint64_t path_offset = *(reinterpret_cast<uint64_t*>(ptr));
+            ptr += PATH_OFFSET_SIZE;
             uint8_t is_data = *ptr;
 
-            node->data_vector.emplace_back(DataItem(key, RealData{.data = data, .is_data = is_data}));
+            node->data_vector.emplace_back(
+                    DataItem(key, RealData{.data = data, .path_offset = path_offset, .is_data = is_data})
+            );
         }
     }
     else {
@@ -371,5 +413,92 @@ BTreeNodePtr BPTree::makeNodeFromData(uint8_t *base, uint64_t offset)
         node->right_sibling = makeNodeFromData(base, right_sibling);
 
     return node;
+}
+
+
+void BPTree::store()
+{
+    storeSubtree(m_root);
+}
+
+
+void BPTree::storeSubtree(BTreeNodePtr node)
+{
+    uint8_t *node_ptr = nullptr;
+    if (node->offset) {
+        node_ptr = m_blockManager->getBlock(node->offset);
+    }
+    else {
+        node_ptr = m_blockManager->getFreeTreeNodeBlock();
+    }
+    node_ptr[IS_LEAF_OFFSET] = static_cast<uint8_t>(node->is_leaf);
+    node_ptr[DATA_COUNT_OFFSET] = static_cast<uint8_t>(node->data_vector.size());
+
+    auto *left_sibling = reinterpret_cast<uint64_t*>(node_ptr + LEFT_SIBLING_OFFSET);
+    if (node->left_sibling) {
+        if (!node->left_sibling->offset) {
+            node->left_sibling->offset = m_blockManager->getOffset(m_blockManager->getFreeTreeNodeBlock());
+        }
+        *left_sibling = boost::endian::native_to_little(node->left_sibling->offset);
+    }
+    else {
+        *left_sibling = 0;
+    }
+
+    auto *right_sibling = reinterpret_cast<uint64_t*>(node_ptr + RIGHT_SIBLING_OFFSET);
+    if (node->right_sibling) {
+        if (!node->right_sibling->offset) {
+            node->right_sibling->offset = m_blockManager->getOffset(m_blockManager->getFreeTreeNodeBlock());
+        }
+        *right_sibling = boost::endian::native_to_little(node->right_sibling->offset);
+    }
+    else {
+        *right_sibling = 0;
+    }
+
+    if (node->is_leaf) {
+        for (auto i = 0u; i < node->data_vector.size(); i++) {
+            const DataItem &item = node->data_vector[i];
+            const auto & data_item = getData(item.data);
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+
+            auto *key = reinterpret_cast<uint64_t *>(ptr);
+            *key = boost::endian::native_to_little(item.key);
+            ptr += KEY_SIZE;
+
+            auto *data = reinterpret_cast<uint64_t *>(ptr);
+            *data = boost::endian::native_to_little(data_item.data);
+            ptr += DATA_SIZE;
+
+            auto *path_offset = reinterpret_cast<uint64_t *>(ptr);
+            *path_offset = boost::endian::native_to_little(data_item.path_offset);
+            ptr += PATH_OFFSET_SIZE;
+
+            *ptr = static_cast<uint8_t>(data_item.is_data);
+        }
+    }
+    else { // Not a leaf.
+        for (auto i = 0u; i < node->data_vector.size(); i++) {
+            const DataItem &item = node->data_vector[i];
+            auto child = getPtr(item.data);
+            storeSubtree(child);
+
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+
+            auto *key = reinterpret_cast<uint64_t *>(ptr);
+            *key = boost::endian::native_to_little(item.key);
+            ptr += KEY_SIZE;
+
+            auto *data = reinterpret_cast<uint64_t *>(ptr);
+            *data = boost::endian::native_to_little(child->offset);
+            ptr += DATA_SIZE;
+
+            auto *path_offset = reinterpret_cast<uint64_t *>(ptr);
+            *path_offset = 0;//boost::endian::native_to_little(data_item.path_offset);
+            ptr += PATH_OFFSET_SIZE;
+
+            *ptr = static_cast<uint8_t>(0);
+        }
+    }
 }
 

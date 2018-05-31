@@ -20,6 +20,7 @@ namespace UniversalStorage {
 struct RealData
 {
     uint64_t data;
+    uint64_t path_offset; //!< offset to path
     bool is_data; //!< Data or pointer to data
 };
 
@@ -38,7 +39,7 @@ struct DataItem
 using BTreeNodePtr = std::shared_ptr<BTreeNode>;
 struct BTreeNode
 {
-    uint64_t offset{ std::numeric_limits<uint64_t>::max() };
+    uint64_t offset{ 0 };
     bool is_leaf { true };
     BTreeNodePtr left_sibling{ nullptr };
     BTreeNodePtr right_sibling{ nullptr };
@@ -53,12 +54,12 @@ public:
     BPTree(IBlockManagerPtr blockManager);
     ~BPTree();
 
-    void addKey(uint64_t key, uint64_t data_off, bool is_data);
-    std::vector<data_type> getValue(uint64_t key);
-    void removeKey(uint64_t key);
+    void addKey(uint64_t key, uint64_t data_off, uint64_t path_off, bool is_data);
+    std::vector<data_type> getValues(uint64_t key) const;
+    void removeKey(uint64_t key, uint64_t path_offset);
 
-    void init();
-    void sync();
+    void load();
+    void store();
 
     template <typename T>
     void traverse(T &&func)
@@ -68,18 +69,19 @@ public:
 
 
 protected:
-    enum RemoveStatus { REMOVE_OK, REMOVE_MERGED, CANT_MERGE };
+    enum RemoveStatus { REMOVE_OK, NEED_SIBLING, REMOVE_MERGED, CANT_MERGE };
 
     BTreeNodePtr internalAddData(BTreeNodePtr node, uint64_t key, data_type data);
-    RemoveStatus internalRemoveData(BTreeNodePtr node, uint64_t key);
+    RemoveStatus internalRemoveData(BTreeNodePtr node, uint64_t key, uint64_t path_offset);
     BTreeNodePtr makeSibling(BTreeNodePtr node, uint64_t key, const std::any &data);
     RemoveStatus mergeWithSibling(BTreeNodePtr node);
-    BTreeNodePtr getChildWithKey(BTreeNodePtr node, uint64_t key);
+    BTreeNodePtr getChildWithKey(BTreeNodePtr node, uint64_t key) const;
     void insertData(BTreeNodePtr node, uint64_t key, const std::any &data);
     void clearNode(BTreeNodePtr node);
+    void storeSubtree(BTreeNodePtr node);
 
-    BTreeNodePtr getPtr(const std::any &var);
-    data_type getData(const std::any &var);
+    BTreeNodePtr getPtr(const std::any &var) const;
+    data_type getData(const std::any &var) const;
 
     BTreeNodePtr makeNodeFromData(uint8_t *base, uint64_t offset);
 
@@ -112,8 +114,9 @@ protected:
     static constexpr uint8_t  MAX_CHILD_COUNT = 100;
     static constexpr uint8_t  KEY_SIZE = 8;
     static constexpr uint8_t  DATA_SIZE = 8;
+    static constexpr uint8_t  PATH_OFFSET_SIZE = 8;
     static constexpr uint8_t  IS_DATA_FLAG_SIZE = 1;
-    static constexpr uint8_t  DATA_ITEM_SIZE = KEY_SIZE + DATA_SIZE + IS_DATA_FLAG_SIZE;
+    static constexpr uint8_t  DATA_ITEM_SIZE = KEY_SIZE + DATA_SIZE + PATH_OFFSET_SIZE + IS_DATA_FLAG_SIZE;
     static constexpr uint64_t MAX_NODE_SIZE = DATA_OFFSET + (MAX_CHILD_COUNT * DATA_ITEM_SIZE);
 };
 
