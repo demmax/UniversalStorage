@@ -28,6 +28,7 @@ public:
     virtual std::string getPathFromBlock(uint64_t offset) = 0;
     virtual std::vector<uint8_t> getDataFromBlock(uint64_t offset) = 0;
 
+    virtual bool isRootInitialized() const = 0;
     virtual uint64_t getOffset(uint8_t *address) = 0;
 
     virtual ~IBlockManager() = default;

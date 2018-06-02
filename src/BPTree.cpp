@@ -21,10 +21,9 @@ using namespace UniversalStorage;
 
 
 
-BPTree::BPTree(IBlockManagerPtr blockManager) : m_blockManager(std::move(blockManager))
+BPTree::BPTree(IBlockManagerPtr blockManager) : m_blockManager(blockManager)
 {
-    m_root = std::make_shared<BTreeNode>();
-    m_root->offset = 0;
+    load();
 }
 
 
@@ -52,11 +51,11 @@ void BPTree::setValue(const std::string &path, const std::vector<uint8_t> &data)
     }
 
     DEBUG_ASSERT_INVARIANTS;
-//    store();
+    store();
 }
 
 
-bool BPTree::internalAddData(BTreeNodePtr node, uint64_t key, data_type data)
+bool BPTree::internalAddData(BTreeNodePtr node, uint64_t key, DataRecord data)
 {
     if (node->is_leaf) {
         insertData(node, key, data);
@@ -189,9 +188,8 @@ void BPTree::removeKey(const std::string &path)
 {
     auto key = hash(path);
     internalRemoveData(m_root, key, path);
+    store();
     DEBUG_ASSERT_INVARIANTS;
-//    if (status == NEED_SIBLING)
-//        throw NoSuchPathException((std::to_string(key) + " (" + path +")").c_str());
 }
 
 
@@ -223,6 +221,9 @@ BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key,
 
             const DataRecord &record = getData((*del_it).data);
             if (path == m_blockManager->getPathFromBlock(record.path_offset)) {
+                m_blockManager->freeBlock(record.path_offset);
+                if (!record.is_data)
+                    m_blockManager->freeBlock(record.data);
                 node->data_vector.erase(del_it);
                 return REMOVED;
             }
@@ -372,9 +373,9 @@ void BPTree::assertInvariants(BTreeNodePtr node)
 }
 
 
-data_type BPTree::getData(const std::any &var) const
+DataRecord BPTree::getData(const std::any &var) const
 {
-    return std::any_cast<data_type>(var);
+    return std::any_cast<DataRecord>(var);
 }
 
 
@@ -384,15 +385,17 @@ BTreeNodePtr BPTree::getPtr(const std::any &var) const
 }
 
 
-//void BPTree::sync()
-//{
-//
-//}
-
 void BPTree::load()
 {
-    uint8_t* root_ptr = m_blockManager->getRootBlock();
-    m_root = makeNodeFromData(root_ptr, 0);
+    if (m_blockManager->isRootInitialized()) {
+        uint8_t *root_ptr = m_blockManager->getRootBlock();
+        m_root = makeNodeFromData(root_ptr, 0);
+    }
+    else {
+        m_root = std::make_shared<BTreeNode>();
+        m_root->offset = 0;
+        m_root->is_leaf = true;
+    }
 }
 
 
@@ -409,7 +412,7 @@ BTreeNodePtr BPTree::makeNodeFromData(uint8_t *base, uint64_t offset)
 
     if (node->is_leaf) {
         for (auto i = 0; i < data_count; i++) {
-            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * DATA_ITEM_SIZE);
             uint64_t key = *(reinterpret_cast<uint64_t*>(ptr));
             ptr += KEY_SIZE;
             uint64_t data = *(reinterpret_cast<uint64_t*>(ptr));
@@ -425,7 +428,7 @@ BTreeNodePtr BPTree::makeNodeFromData(uint8_t *base, uint64_t offset)
     }
     else {
         for (auto i = 0; i < data_count; i++) {
-            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * DATA_ITEM_SIZE);
             uint64_t key = *(reinterpret_cast<uint64_t*>(ptr));
             ptr += KEY_SIZE;
             uint64_t child_offset = *(reinterpret_cast<uint64_t*>(ptr));
@@ -453,7 +456,7 @@ void BPTree::store()
 void BPTree::storeSubtree(BTreeNodePtr node)
 {
     uint8_t *node_ptr = nullptr;
-    if (node->offset) {
+    if (node->offset != BTreeNode::NULL_OFFSET) {
         node_ptr = m_blockManager->getTreeNodeBlock(node->offset);
     }
     else {
@@ -488,7 +491,7 @@ void BPTree::storeSubtree(BTreeNodePtr node)
         for (auto i = 0u; i < node->data_vector.size(); i++) {
             const DataItem &item = node->data_vector[i];
             const auto & data_item = getData(item.data);
-            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * DATA_ITEM_SIZE);
 
             auto *key = reinterpret_cast<uint64_t *>(ptr);
             *key = boost::endian::native_to_little(item.key);
@@ -511,7 +514,7 @@ void BPTree::storeSubtree(BTreeNodePtr node)
             auto child = getPtr(item.data);
             storeSubtree(child);
 
-            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * IS_DATA_FLAG_SIZE);
+            uint8_t *ptr = node_ptr + DATA_OFFSET + (i * DATA_ITEM_SIZE);
 
             auto *key = reinterpret_cast<uint64_t *>(ptr);
             *key = boost::endian::native_to_little(item.key);
@@ -533,13 +536,15 @@ void BPTree::storeSubtree(BTreeNodePtr node)
 
 void BPTree::addData(uint64_t key, uint64_t path_off, uint64_t data, bool is_data)
 {
-    data_type real_data{.data = data, .path_offset = path_off, .is_data = is_data};
+    DataRecord real_data{.data = data, .path_offset = path_off, .is_data = is_data};
     bool need_check = internalAddData(m_root, key, real_data);
     if (need_check && m_root->data_vector.size() > MAX_LOAD_FACTOR) {
         // Need split root. Move root to new place & add fill it by new pointers
         auto new_node = std::make_shared<BTreeNode>();
         std::swap(*m_root, *new_node);
         m_root->is_leaf = false;
+        m_root->offset = 0;
+        new_node->offset = BTreeNode::NULL_OFFSET;
         auto sibling = makeSibling(new_node);
 
         auto max_left_key = new_node->data_vector.back().key;

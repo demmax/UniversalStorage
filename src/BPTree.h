@@ -19,12 +19,11 @@ namespace UniversalStorage {
 
 struct DataRecord
 {
-    uint64_t data;
+    uint64_t data; //!< data or data offset
     uint64_t path_offset; //!< offset to path
-    bool is_data; //!< Data or pointer to data
+    bool is_data; //!< is data or pointer to data
 };
 
-using data_type = DataRecord;
 
 struct BTreeNode;
 struct DataItem
@@ -39,7 +38,8 @@ struct DataItem
 using BTreeNodePtr = std::shared_ptr<BTreeNode>;
 struct BTreeNode
 {
-    uint64_t offset{ 0 };
+    static constexpr uint64_t NULL_OFFSET = std::numeric_limits<uint64_t>::max();
+    uint64_t offset{ NULL_OFFSET };
     bool is_leaf { true };
     BTreeNodePtr left_sibling{ nullptr };
     BTreeNodePtr right_sibling{ nullptr };
@@ -73,7 +73,6 @@ protected:
 
     // Internal tree functions
     void addData(uint64_t key, uint64_t path_off, uint64_t data, bool is_data);
-//    DataRecord getValue(uint64_t key, const std::string &path) const;
     bool updateValue(uint64_t key, const std::string &path, uint64_t data, bool is_data);
     bool internalAddData(BTreeNodePtr node, uint64_t key, DataRecord data);
     RemoveStatus internalRemoveData(BTreeNodePtr node, uint64_t key, const std::string &path);
@@ -83,7 +82,7 @@ protected:
 
     // Helpers
     BTreeNodePtr getPtr(const std::any &var) const;
-    data_type getData(const std::any &var) const;
+    DataRecord getData(const std::any &var) const;
 
     // Load/storing data
     void storeSubtree(BTreeNodePtr node);
@@ -113,9 +112,9 @@ protected:
 
     static constexpr uint64_t IS_LEAF_OFFSET = 0;
     static constexpr uint64_t LEFT_SIBLING_OFFSET = 1;
-    static constexpr uint64_t RIGHT_SIBLING_OFFSET = 7;
-    static constexpr uint64_t DATA_COUNT_OFFSET = 13;
-    static constexpr uint64_t DATA_OFFSET = 14;
+    static constexpr uint64_t RIGHT_SIBLING_OFFSET = 9;
+    static constexpr uint64_t DATA_COUNT_OFFSET = 17;
+    static constexpr uint64_t DATA_OFFSET = 18;
     static constexpr uint8_t  MAX_CHILD_COUNT = 100;
     static constexpr uint8_t  KEY_SIZE = 8;
     static constexpr uint8_t  DATA_SIZE = 8;

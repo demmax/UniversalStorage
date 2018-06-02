@@ -7,6 +7,10 @@
 
 #include <map>
 #include <random>
+#include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <queue>
 #include "IBlockManager.h"
 #include "utils.hpp"
 
@@ -15,8 +19,9 @@ class StubBlockManager : public UniversalStorage::IBlockManager
 protected:
     std::map<uint64_t, std::string> pathMap;
     std::map<uint64_t, std::vector<uint8_t>> dataMap;
-    std::map<uint8_t*, std::unique_ptr<uint8_t[]>> nodesMap;
-    std::unique_ptr<uint8_t[]> rootBlock {std::make_unique<uint8_t[]>(2048)};
+    std::map<uint64_t, std::vector<uint8_t>> nodesMap;
+    std::unique_ptr<uint8_t[]> rootBlock {std::make_unique<uint8_t[]>(4096)};
+    bool isRootInit { false };
     std::random_device rd;
     std::mt19937 mt;
     std::uniform_int_distribution<uint64_t> random_dist;
@@ -24,7 +29,6 @@ protected:
 public:
     StubBlockManager() : mt(rd()), random_dist(0, std::numeric_limits<uint64_t>::max())
     {
-        std::srand(std::time(nullptr));
     }
 
     uint8_t *getRootBlock() override
@@ -35,16 +39,19 @@ public:
 
     uint8_t *getTreeNodeBlock(uint64_t offset) override
     {
+        if (!offset)
+            return getRootBlock();
         return reinterpret_cast<uint8_t*>(offset);
     }
 
 
     uint8_t *getFreeTreeNodeBlock() override
     {
-        auto new_block = std::make_unique<uint8_t[]>(2048);
-        uint8_t *ptr = new_block.get();
-        nodesMap.emplace(std::make_pair(ptr, std::move(new_block)));
-        return ptr;
+        std::vector <uint8_t> vec;
+        vec.resize(4096);
+        uint64_t offset = getOffset(vec.data());
+        nodesMap.insert(std::make_pair(offset, vec));
+        return nodesMap[offset].data();
     }
 
 
@@ -55,7 +62,7 @@ public:
 
     void freeTreeNodeBlock(uint8_t *address) override
     {
-        nodesMap.erase(address);
+        nodesMap.erase(getOffset(address));
     }
 
 
@@ -84,7 +91,7 @@ public:
     uint64_t storeNewPath(const std::string &path) override
     {
         uint64_t offset = random_dist(mt);
-        pathMap.insert(std::make_pair(offset, path));
+        pathMap[offset] = path;
         return offset;
     }
 
@@ -107,6 +114,14 @@ public:
         dataMap.erase(offset);
     }
 
+    virtual bool isRootInitialized() const override
+    {
+        for (auto i = 0u; i < 2048; ++i) {
+            if (rootBlock[i])
+                return true;
+        }
+        return false;
+    }
 };
 
 
