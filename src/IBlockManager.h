@@ -18,6 +18,7 @@ public:
     virtual uint8_t *getRootBlock() = 0;
     virtual uint8_t *getBlock(uint64_t offset) = 0;
     virtual uint64_t getOffset(uint8_t *ptr) = 0;
+    virtual std::string getPathString(uint64_t offset) = 0;
     virtual ~IBlockManager() = default;
 };
 

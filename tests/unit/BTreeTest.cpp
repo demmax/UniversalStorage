@@ -10,7 +10,9 @@
 
 
 using namespace UniversalStorage;
-
+using ::testing::Return;
+using ::testing::ReturnArg;
+using ::testing::_;
 
 
 TEST(BTreeTest, AddingTest)
@@ -48,120 +50,164 @@ TEST(BTreeTest, AddingTest)
 
 TEST(BTreeTest, GettingValuesTest)
 {
-    BPTree tree(std::make_shared<MockBlockManager>());
+    auto blockManager = std::make_shared<MockBlockManager>();
+    BPTree tree(blockManager);
     int key = 0;
     int val = 1;
 
     const int N = 10000;
     for (int i = 0; i < N; i++) {
-        tree.addKey(key, val, 0, true);
+        tree.addKey(key, val, key, true);
         ++key; ++val;
     }
 
     for (int i = 0; i < N; i++) {
-        auto val = tree.getValues(i);
-        EXPECT_EQ(val.front().data, i + 1);
+        EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(Return(std::to_string(i)));
+        auto val = tree.getValue(i, std::to_string(i));
+        EXPECT_EQ(val.data, i + 1);
     }
 }
 
 TEST(BTreeTest, GettingValuesReversedTest)
 {
-    BPTree tree(std::make_shared<MockBlockManager>());
+    auto blockManager = std::make_shared<MockBlockManager>();
+    BPTree tree(blockManager);
     int key = 10000;
     int val = 10001;
 
     const int N = 10000;
     for (int i = 0; i < N; i++) {
-        tree.addKey(key, val, 0, true);
+        tree.addKey(key, val, key, true);
         --key; --val;
     }
 
     for (int i = 1; i < N; i++) {
-        auto val = tree.getValues(i);
-        EXPECT_EQ(val.front().data, i + 1);
+        EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(Return(std::to_string(i)));
+        auto val = tree.getValue(i, std::to_string(i));
+        EXPECT_EQ(val.data, i + 1);
     }
 }
 
-TEST(BTreeTest, SimpleRemovingTest)
+TEST(BTreeTest, OneElementRemovingTest)
 {
-    BPTree tree(std::make_shared<MockBlockManager>());
+    auto blockManager = std::make_shared<MockBlockManager>();
+    BPTree tree(blockManager);
     int key = 0;
     int val = 1;
 
     const int N = 10000;
     for (uint64_t i = 0; i < N; i++) {
-        tree.addKey(key, val, key + 1, true);
+        tree.addKey(key, val, key, true);
         ++key; ++val;
     }
 
-    for (uint64_t i = 0; i < N - 1; i++) {
-        tree.removeKey(i, i + 1);
+    EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(::testing::Invoke(
+            [=](uint64_t off) {
+                return std::to_string(off);
+            }));
+
+        tree.removeKey(N / 2, std::to_string(N / 2));
+
+    for (int i = 0; i < N / 2; i++) {
+        EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(Return(std::to_string(i)));
+        auto val = tree.getValue(i, std::to_string(i));
+        EXPECT_EQ(val.data, i + 1);
     }
 
-    tree.removeKey(N-1, N);
-    for (int i = 0; i < N; i++) {
-        EXPECT_THROW(tree.getValues(i), NoSuchPathException);
+    for (int i = N / 2 + 1; i < N / 2; i++) {
+        EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(Return(std::to_string(i)));
+        auto val = tree.getValue(i, std::to_string(i));
+        EXPECT_EQ(val.data, i + 1);
+    }
+
+    EXPECT_THROW(tree.getValue(N / 2, std::to_string(N / 2)), NoSuchPathException);
+}
+
+TEST(BTreeTest, AllRemovingTest)
+{
+    auto blockManager = std::make_shared<MockBlockManager>();
+    BPTree tree(blockManager);
+    int key = 0;
+    int val = 1;
+
+    const int N = 10000;
+    for (uint64_t i = 0; i < N; i++) {
+        tree.addKey(key, val, key, true);
+        ++key; ++val;
+    }
+
+    EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(::testing::Invoke(
+            [=](uint64_t off) {
+                return std::to_string(off);
+    }));
+
+    for (uint64_t i = 0; i < N - 1; i++) {
+        tree.removeKey(i, std::to_string(i));
+    }
+
+    for (int i = 0; i < N - 1; i++) {
+        EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(Return(std::to_string(i)));
+        EXPECT_THROW(tree.getValue(i, std::to_string(i)), NoSuchPathException);
     }
 }
 
 
 TEST(BTreeTest, MultiKeyTest)
 {
-    BPTree tree(std::make_shared<MockBlockManager>());
+    auto blockManager = std::make_shared<MockBlockManager>();
+    BPTree tree(blockManager);
     const int N = 1000;
     for (int i = 0; i < N; i++) {
-        tree.addKey(1, i, 0, true);
+        tree.addKey(1, i, i, true);
     }
 
-    auto result = tree.getValues(1);
-    std::sort(result.begin(), result.end(), [](const RealData &d1, const RealData &d2) {
-        return d1.data < d2.data;
-    });
-    EXPECT_EQ(result.size(), N);
-    for (int i = 0; i < N; i++) {
-        EXPECT_EQ(result[i].data, i);
-    }
+    EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(::testing::Invoke(
+            [=](uint64_t off) {
+                uint64_t a = off;
+                return std::to_string(a);
+            }));
+    auto result = tree.getValue(1, "500");
+    EXPECT_EQ(result.data, 500);
+    EXPECT_EQ(result.path_offset, 500);
+    EXPECT_TRUE(result.is_data);
 }
 
 TEST(BTreeTest, MultiKeyRemoveTest)
 {
-    BPTree tree(std::make_shared<MockBlockManager>());
+    auto blockManager = std::make_shared<MockBlockManager>();
+    BPTree tree(blockManager);
     const int N = 10000;
     for (int i = 0; i < N; i++) {
         tree.addKey(1, i, i, true);
     }
 
-    struct Func
-    {
-        size_t count {0};
-        void operator()(uint64_t key, data_type val) {
-            ++count;
-            if (key != 1)
-                throw "sadf";
-        }
-    };
+//    struct Func
+//    {
+//        size_t count {0};
+//        void operator()(uint64_t key, data_type val) {
+//            ++count;
+//            if (key != 1)
+//                throw "sadf";
+//        }
+//    };
+//
+//    Func f;
+//    tree.traverse(f);
 
-    Func f;
-    tree.traverse(f);
+    EXPECT_CALL(*blockManager, getPathString(_)).WillRepeatedly(::testing::Invoke(
+            [=](uint64_t off) {
+                return std::to_string(off);
+            }));
 
-    auto result = tree.getValues(1);
-    EXPECT_EQ(result.size(), N);
+    uint64_t off = N / 2;
+    auto off_str = std::to_string(off);
+    auto result = tree.getValue(1, off_str);
+    EXPECT_EQ(result.data, off);
+    EXPECT_EQ(result.path_offset, off);
+    EXPECT_TRUE(result.is_data);
 
-    tree.removeKey(1, N / 2);
-    result = tree.getValues(1);
-    EXPECT_EQ(result.size(), N - 1);
-
-    std::sort(result.begin(), result.end(), [](const RealData &d1, const RealData &d2) {
-        return d1.data < d2.data;
-    });
-
-    for (int i = 0; i < N / 2; i++) {
-        EXPECT_EQ(result[i].data, i);
-    }
-
-    for (int i = N / 2 + 1; i < N; i++) {
-        EXPECT_EQ(result[i].data, i);
-    }
+    tree.removeKey(1, off_str);
+    EXPECT_THROW(tree.getValue(1, off_str), NoSuchPathException);
 }
 
 TEST(BTreeTest, SimpleStoreLoadTest)

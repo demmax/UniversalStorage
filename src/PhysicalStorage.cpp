@@ -12,27 +12,21 @@ void UniversalStorage::PhysicalStorage::setValue(const std::string &path, const 
     auto path_hash = hash(path);
 
     // Check if path already exists. In such case, just update data offset.
-    std::vector<RealData> values = m_btree.getValues(path_hash);
-    for (const auto &data_item : values) {
-        const std::string &data_path = getStringFromPathOffset(data_item.path_offset);
-        if (path == data_path) {
-            storeData(data, data_item.data);
-            return;
-        }
-    }
-
-    // New path.
-    auto block = storeDataInNewBlock(reinterpret_cast<const uint8_t*>(boost::endian::native_to_little(path).c_str()), path.size());
-    if (data.size() > 8) {
-        auto data_bytes = storeDataInNewBlock(data.data(), data.size());
-        m_btree.addKey(path_hash, data_bytes, block, false);
-    }
-    else {
-        auto data_bytes = packVector(data);
-        m_btree.addKey(path_hash, data_bytes, block, true);
-    }
-
-    m_btree.store();
+//    DataRecord value = m_btree.getValue(path_hash, path);
+//    storeData(data, value.data);
+//
+//    // New path.
+//    auto block = storeDataInNewBlock(reinterpret_cast<const uint8_t*>(boost::endian::native_to_little(path).c_str()), path.size());
+//    if (data.size() > 8) {
+//        auto data_bytes = storeDataInNewBlock(data.data(), data.size());
+//        m_btree.addKey(path_hash, data_bytes, block, false);
+//    }
+//    else {
+//        auto data_bytes = packVector(data);
+//        m_btree.addKey(path_hash, data_bytes, block, true);
+//    }
+//
+//    m_btree.store();
 //    m_blockManager.sync();
 }
 
@@ -40,20 +34,13 @@ void UniversalStorage::PhysicalStorage::setValue(const std::string &path, const 
 std::vector<uint8_t> UniversalStorage::PhysicalStorage::getValue(const std::string &path) const
 {
     auto path_hash = hash(path);
-    std::vector<RealData> values = m_btree.getValues(path_hash);
-    for (const auto &data_item : values) {
-        const std::string &data_path = getStringFromPathOffset(data_item.path_offset);
-        if (path == data_path) {
-            if (data_item.is_data) {
-                return unpackValue(data_item.data);
-            }
-            else {
-                return getDataFromOffset(data_item.data);
-            }
-        }
+    DataRecord value = m_btree.getValue(path_hash, path);
+    if (value.is_data) {
+        return unpackValue(value.data);
     }
-
-    throw NoSuchPathException(path.c_str());
+    else {
+        return getDataFromOffset(value.data);
+    }
 }
 
 
@@ -61,14 +48,14 @@ void UniversalStorage::PhysicalStorage::removeValue(const std::string &path)
 {
     auto path_hash = hash(path);
 
-    std::vector<RealData> values = m_btree.getValues(path_hash);
-    for (const auto &data_item : values) {
-        const std::string &data_path = getStringFromPathOffset(data_item.path_offset);
-        if (path == data_path) {
-            m_btree.removeKey(path_hash, data_item.path_offset);
-            return;
-        }
-    }
+//    std::vector<DataRecord> values = m_btree.getValue(path_hash);
+//    for (const auto &data_item : values) {
+//        const std::string &data_path = getStringFromPathOffset(data_item.path_offset);
+//        if (path == data_path) {
+//            m_btree.removeKey(path_hash, data_item.path_offset);
+//            return;
+//        }
+//    }
 
     throw NoSuchPathException(path.c_str());
 }

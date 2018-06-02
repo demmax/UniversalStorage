@@ -17,14 +17,14 @@
 namespace UniversalStorage {
 
 
-struct RealData
+struct DataRecord
 {
     uint64_t data;
     uint64_t path_offset; //!< offset to path
     bool is_data; //!< Data or pointer to data
 };
 
-using data_type = RealData;
+using data_type = DataRecord;
 
 struct BTreeNode;
 struct DataItem
@@ -55,8 +55,8 @@ public:
     ~BPTree();
 
     void addKey(uint64_t key, uint64_t data_off, uint64_t path_off, bool is_data);
-    std::vector<data_type> getValues(uint64_t key) const;
-    void removeKey(uint64_t key, uint64_t path_offset);
+    DataRecord getValue(uint64_t key, const std::string &path) const;
+    void removeKey(uint64_t key, const std::string &path);
 
     void load();
     void store();
@@ -69,12 +69,11 @@ public:
 
 
 protected:
-    enum RemoveStatus { REMOVE_OK, NEED_SIBLING, REMOVE_MERGED, CANT_MERGE };
+    enum RemoveStatus { REMOVED, FIXED, NOT_FOUND, CANT_MERGE };
 
-    BTreeNodePtr internalAddData(BTreeNodePtr node, uint64_t key, data_type data);
-    RemoveStatus internalRemoveData(BTreeNodePtr node, uint64_t key, uint64_t path_offset);
-    BTreeNodePtr makeSibling(BTreeNodePtr node, uint64_t key, const std::any &data);
-    RemoveStatus mergeWithSibling(BTreeNodePtr node);
+    bool internalAddData(BTreeNodePtr node, uint64_t key, DataRecord data);
+    RemoveStatus internalRemoveData(BTreeNodePtr node, uint64_t key, const std::string &path);
+    BTreeNodePtr makeSibling(BTreeNodePtr node);
     BTreeNodePtr getChildWithKey(BTreeNodePtr node, uint64_t key) const;
     void insertData(BTreeNodePtr node, uint64_t key, const std::any &data);
     void clearNode(BTreeNodePtr node);
