@@ -4,6 +4,7 @@
 
 #include "BPTree.h"
 #include "exceptions.h"
+#include "utils.hpp"
 #include <cstring>
 #include <boost/endian/conversion.hpp>
 #include <iostream>
@@ -32,31 +33,26 @@ BPTree::~BPTree()
 }
 
 
-void BPTree::clearNode(BTreeNodePtr node)
+void BPTree::setValue(const std::string &path, const std::vector<uint8_t> &data)
 {
-}
+    uint64_t path_hash = hash(path);
+    bool is_data = false;
+    uint64_t data_bytes = 0;
+    if (data.size() > 8) {
+        data_bytes = m_blockManager->storeNewData(data);
+    }
+    else {
+        data_bytes = packVector(data);
+        is_data = true;
+    }
 
-
-void BPTree::addKey(uint64_t key, uint64_t data, uint64_t path_off, bool is_data)
-{
-    data_type real_data{.data = data, .path_offset = path_off, .is_data = is_data};
-    bool need_check = internalAddData(m_root, key, real_data);
-    if (need_check && m_root->data_vector.size() > MAX_LOAD_FACTOR) {
-        // Need split root. Move root to new place & add fill it by new pointers
-        auto new_node = std::make_shared<BTreeNode>();
-        std::swap(*m_root, *new_node);
-        m_root->is_leaf = false;
-        auto sibling = makeSibling(new_node);
-
-        auto max_left_key = new_node->data_vector.back().key;
-        auto max_new_key = sibling->data_vector.back().key;
-        m_root->data_vector.emplace_back(DataItem(max_left_key, new_node));
-        m_root->data_vector.emplace_back(DataItem(max_new_key, sibling));
-        new_node->right_sibling = sibling;
-        sibling->left_sibling = new_node;
+    if (!updateValue(path_hash, path, data_bytes, is_data)) {
+        uint64_t path_offset = m_blockManager->storeNewPath(path);
+        addData(path_hash, path_offset, data_bytes, is_data);
     }
 
     DEBUG_ASSERT_INVARIANTS;
+//    store();
 }
 
 
@@ -121,9 +117,13 @@ BTreeNodePtr BPTree::makeSibling(BTreeNodePtr node)
 }
 
 
-DataRecord BPTree::getValue(uint64_t key, const std::string &path) const
+std::vector<uint8_t> BPTree::getValue(const std::string &path) const
 {
+    uint64_t key = hash(path);
     BTreeNodePtr node = getChildWithKey(m_root, key);
+    if (!node)
+        throw NoSuchPathException(path.c_str());
+
     auto it = std::find_if(node->data_vector.begin(), node->data_vector.end(), [&](auto data) { return data.key == key; });
     if (it == node->data_vector.end())
         throw NoSuchPathException(path.c_str());
@@ -131,8 +131,13 @@ DataRecord BPTree::getValue(uint64_t key, const std::string &path) const
     while ((*it).key == key) {
         // Check path
         DataRecord data_item = getData((*it).data);
-        if (m_blockManager->getPathString(data_item.path_offset) == path)
-            return data_item;
+        auto p = m_blockManager->getPathFromBlock(data_item.path_offset);
+        if (p == path) {
+            if (data_item.is_data)
+                return unpackValue(data_item.data);
+            else
+                return m_blockManager->getDataFromBlock(data_item.data);
+        }
 
         it = std::next(it);
         if (it == node->data_vector.end()) { // Go to sibling
@@ -147,10 +152,43 @@ DataRecord BPTree::getValue(uint64_t key, const std::string &path) const
     throw NoSuchPathException(path.c_str());
 }
 
-
-void BPTree::removeKey(uint64_t key, const std::string &path)
+bool BPTree::updateValue(uint64_t key, const std::string &path, uint64_t data, bool is_data)
 {
-    RemoveStatus status = internalRemoveData(m_root, key, path);
+    BTreeNodePtr node = getChildWithKey(m_root, key);
+    if (!node)
+        return false;
+
+    auto it = std::find_if(node->data_vector.begin(), node->data_vector.end(), [&](auto data) { return data.key == key; });
+    if (it == node->data_vector.end())
+        return false;
+
+    while ((*it).key == key) {
+        // Check path
+        DataRecord data_item = getData((*it).data);
+        if (m_blockManager->getPathFromBlock(data_item.path_offset) == path) {
+            if (!data_item.is_data)
+                m_blockManager->freeBlock(data_item.data);
+            (*it).data = DataRecord{.data = data, .path_offset = data_item.path_offset, .is_data = is_data};
+            return true;
+        }
+
+        it = std::next(it);
+        if (it == node->data_vector.end()) { // Go to sibling
+            if (!node->right_sibling)
+                return false;
+
+            node = node->right_sibling;
+            it = node->data_vector.begin();
+        }
+    }
+
+    return false;
+}
+
+void BPTree::removeKey(const std::string &path)
+{
+    auto key = hash(path);
+    internalRemoveData(m_root, key, path);
     DEBUG_ASSERT_INVARIANTS;
 //    if (status == NEED_SIBLING)
 //        throw NoSuchPathException((std::to_string(key) + " (" + path +")").c_str());
@@ -161,7 +199,7 @@ BTreeNodePtr BPTree::getChildWithKey(BTreeNodePtr node, uint64_t key) const
 {
     auto it = std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key);
     if (it == node->data_vector.end())
-        throw NoSuchPathException(std::to_string(key).c_str());
+        return BTreeNodePtr();
 
     if (node->is_leaf)
         return node;
@@ -183,9 +221,8 @@ BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key,
             if ((*del_it).key != key)
                 throw NoSuchPathException(path.c_str());
 
-            DataRecord record = getData((*del_it).data);
-            std::string p = m_blockManager->getPathString(record.path_offset);
-            if (p == path) {
+            const DataRecord &record = getData((*del_it).data);
+            if (path == m_blockManager->getPathFromBlock(record.path_offset)) {
                 node->data_vector.erase(del_it);
                 return REMOVED;
             }
@@ -211,6 +248,11 @@ BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key,
 
     if (status == NOT_FOUND) { // Already iterated over all children.
         throw NoSuchPathException(path.c_str());
+    }
+
+    if (status == OK) {
+        (*child_it).key = child->data_vector.back().key;
+        return OK;
     }
 
     if (status == REMOVED) {
@@ -246,13 +288,29 @@ BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key,
 //        auto sibling_it = (sibling == child->left_sibling ? std::prev(child_it) : std::next(child_it));
         // Merge siblings and update data
         if (sibling->data_vector.size() > MIN_LOAD_FACTOR) {
-            child->data_vector.push_back(sibling->data_vector.front());
-            sibling->data_vector.erase(sibling->data_vector.begin());
+            if ((*child_it).key <= (*sibling_it).key) { // Merge with right sibling
+                child->data_vector.push_back(sibling->data_vector.front());
+                sibling->data_vector.erase(sibling->data_vector.begin());
+            }
+            else {
+                child->data_vector.insert(child->data_vector.begin(), sibling->data_vector.back());
+                sibling->data_vector.erase(std::prev(sibling->data_vector.end()));
+            }
             (*child_it).key = child->data_vector.back().key;
-            return FIXED;
+            (*sibling_it).key = sibling->data_vector.back().key;
+            return OK;
         }
         else { // Sibling hasn't enough nodes too. Merge them.
-            std::copy(sibling->data_vector.begin(), sibling->data_vector.end(), std::back_inserter(child->data_vector));
+            if ((*child_it).key <= (*sibling_it).key) {
+                std::copy(sibling->data_vector.begin(), sibling->data_vector.end(),
+                          std::back_inserter(child->data_vector));
+            }
+            else {
+                std::copy(child->data_vector.begin(), child->data_vector.end(),
+                          std::back_inserter(sibling->data_vector));
+                std::swap(child->data_vector, sibling->data_vector);
+            }
+
             if (sibling == child->left_sibling) {
                 child->left_sibling = sibling->left_sibling;
                 if (child->left_sibling)
@@ -396,7 +454,7 @@ void BPTree::storeSubtree(BTreeNodePtr node)
 {
     uint8_t *node_ptr = nullptr;
     if (node->offset) {
-        node_ptr = m_blockManager->getBlock(node->offset);
+        node_ptr = m_blockManager->getTreeNodeBlock(node->offset);
     }
     else {
         node_ptr = m_blockManager->getFreeTreeNodeBlock();
@@ -469,5 +527,26 @@ void BPTree::storeSubtree(BTreeNodePtr node)
 
             *ptr = static_cast<uint8_t>(0);
         }
+    }
+}
+
+
+void BPTree::addData(uint64_t key, uint64_t path_off, uint64_t data, bool is_data)
+{
+    data_type real_data{.data = data, .path_offset = path_off, .is_data = is_data};
+    bool need_check = internalAddData(m_root, key, real_data);
+    if (need_check && m_root->data_vector.size() > MAX_LOAD_FACTOR) {
+        // Need split root. Move root to new place & add fill it by new pointers
+        auto new_node = std::make_shared<BTreeNode>();
+        std::swap(*m_root, *new_node);
+        m_root->is_leaf = false;
+        auto sibling = makeSibling(new_node);
+
+        auto max_left_key = new_node->data_vector.back().key;
+        auto max_new_key = sibling->data_vector.back().key;
+        m_root->data_vector.emplace_back(DataItem(max_left_key, new_node));
+        m_root->data_vector.emplace_back(DataItem(max_new_key, sibling));
+        new_node->right_sibling = sibling;
+        sibling->left_sibling = new_node;
     }
 }

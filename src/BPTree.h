@@ -54,9 +54,9 @@ public:
     BPTree(IBlockManagerPtr blockManager);
     ~BPTree();
 
-    void addKey(uint64_t key, uint64_t data_off, uint64_t path_off, bool is_data);
-    DataRecord getValue(uint64_t key, const std::string &path) const;
-    void removeKey(uint64_t key, const std::string &path);
+    void setValue(const std::string &path, const std::vector<uint8_t> &data);
+    std::vector<uint8_t> getValue(const std::string &path) const;
+    void removeKey(const std::string &path);
 
     void load();
     void store();
@@ -69,20 +69,26 @@ public:
 
 
 protected:
-    enum RemoveStatus { REMOVED, FIXED, NOT_FOUND, CANT_MERGE };
+    enum RemoveStatus { OK, REMOVED, NOT_FOUND };
 
+    // Internal tree functions
+    void addData(uint64_t key, uint64_t path_off, uint64_t data, bool is_data);
+//    DataRecord getValue(uint64_t key, const std::string &path) const;
+    bool updateValue(uint64_t key, const std::string &path, uint64_t data, bool is_data);
     bool internalAddData(BTreeNodePtr node, uint64_t key, DataRecord data);
     RemoveStatus internalRemoveData(BTreeNodePtr node, uint64_t key, const std::string &path);
     BTreeNodePtr makeSibling(BTreeNodePtr node);
     BTreeNodePtr getChildWithKey(BTreeNodePtr node, uint64_t key) const;
     void insertData(BTreeNodePtr node, uint64_t key, const std::any &data);
-    void clearNode(BTreeNodePtr node);
-    void storeSubtree(BTreeNodePtr node);
 
+    // Helpers
     BTreeNodePtr getPtr(const std::any &var) const;
     data_type getData(const std::any &var) const;
 
+    // Load/storing data
+    void storeSubtree(BTreeNodePtr node);
     BTreeNodePtr makeNodeFromData(uint8_t *base, uint64_t offset);
+
 
     void assertInvariants(BTreeNodePtr node);
 

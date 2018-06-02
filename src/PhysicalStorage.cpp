@@ -19,11 +19,11 @@ void UniversalStorage::PhysicalStorage::setValue(const std::string &path, const 
 //    auto block = storeDataInNewBlock(reinterpret_cast<const uint8_t*>(boost::endian::native_to_little(path).c_str()), path.size());
 //    if (data.size() > 8) {
 //        auto data_bytes = storeDataInNewBlock(data.data(), data.size());
-//        m_btree.addKey(path_hash, data_bytes, block, false);
+//        m_btree.setValue(path_hash, data_bytes, block, false);
 //    }
 //    else {
 //        auto data_bytes = packVector(data);
-//        m_btree.addKey(path_hash, data_bytes, block, true);
+//        m_btree.setValue(path_hash, data_bytes, block, true);
 //    }
 //
 //    m_btree.store();
@@ -33,14 +33,14 @@ void UniversalStorage::PhysicalStorage::setValue(const std::string &path, const 
 
 std::vector<uint8_t> UniversalStorage::PhysicalStorage::getValue(const std::string &path) const
 {
-    auto path_hash = hash(path);
-    DataRecord value = m_btree.getValue(path_hash, path);
-    if (value.is_data) {
-        return unpackValue(value.data);
-    }
-    else {
-        return getDataFromOffset(value.data);
-    }
+//    auto path_hash = hash(path);
+//    DataRecord value = m_btree.getValue(path_hash, path);
+//    if (value.is_data) {
+//        return unpackValue(value.data);
+//    }
+//    else {
+//        return getDataFromOffset(value.data);
+//    }
 }
 
 

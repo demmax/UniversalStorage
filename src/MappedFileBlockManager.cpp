@@ -5,7 +5,7 @@
 #include "MappedFileBlockManager.h"
 
 
-uint8_t *UniversalStorage::MappedFileBlockManager::getFreeBlock()
-{
-    return nullptr;
-}
+//uint8_t *UniversalStorage::MappedFileBlockManager::getFreeBlock()
+//{
+//    return nullptr;
+//}

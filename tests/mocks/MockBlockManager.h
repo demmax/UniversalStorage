@@ -19,6 +19,9 @@ public:
     MOCK_METHOD1(getBlock, uint8_t*(uint64_t offset));
     MOCK_METHOD1(getOffset, uint64_t(uint8_t *ptr));
     MOCK_METHOD1(getPathString, std::string(uint64_t offset));
+    MOCK_METHOD1(storePathString, uint64_t(const std::string &path));
+    MOCK_METHOD3(storeDataInBlock, uint64_t(const uint8_t *data, size_t size, uint64_t offset));
+    MOCK_METHOD2(storeDataInNewBlock, uint64_t(const uint8_t *data, size_t size));
 
 //    virtual uint8_t *getFreeBlock() = 0;
 //    virtual uint8_t *getFreeTreeNodeBlock() = 0;
