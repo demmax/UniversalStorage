@@ -4,14 +4,14 @@
 
 #include "BPTreeStorage.h"
 #include "exceptions.h"
-#include "utils.hpp"
+#include "utils.h"
 #include <cstring>
 #include <boost/endian/conversion.hpp>
 #include <iostream>
 
 using namespace UniversalStorage;
 
-#define DEBUG_ASSERT
+//#define DEBUG_ASSERT
 
 #ifdef DEBUG_ASSERT
 #define DEBUG_ASSERT_INVARIANTS assertInvariants(m_root)
@@ -34,14 +34,14 @@ BPTreeStorage::~BPTreeStorage()
 
 void BPTreeStorage::setValue(const std::string &path, const std::vector<uint8_t> &data)
 {
-    uint64_t path_hash = hash(path);
+    uint64_t path_hash = Utils::hash(path);
     bool is_data = false;
     uint64_t data_bytes = 0;
     if (data.size() > 8) {
         data_bytes = m_blockManager->storeNewData(data);
     }
     else {
-        data_bytes = packVector(data);
+        data_bytes = Utils::packVector(data);
         is_data = true;
     }
 
@@ -118,7 +118,7 @@ BTreeNodePtr BPTreeStorage::makeSibling(BTreeNodePtr node)
 
 std::vector<uint8_t> BPTreeStorage::getValue(const std::string &path) const
 {
-    uint64_t key = hash(path);
+    uint64_t key = Utils::hash(path);
     BTreeNodePtr node = getChildWithKey(m_root, key);
     if (!node)
         throw NoSuchPathException(path.c_str());
@@ -133,7 +133,7 @@ std::vector<uint8_t> BPTreeStorage::getValue(const std::string &path) const
         auto p = m_blockManager->getPathFromBlock(data_item.path_offset);
         if (p == path) {
             if (data_item.is_data)
-                return unpackValue(data_item.data);
+                return Utils::unpackValue(data_item.data);
             else
                 return m_blockManager->getDataFromBlock(data_item.data);
         }
@@ -186,7 +186,7 @@ bool BPTreeStorage::updateValue(uint64_t key, const std::string &path, uint64_t 
 
 void BPTreeStorage::removeValue(const std::string &path)
 {
-    auto key = hash(path);
+    auto key = Utils::hash(path);
     internalRemoveData(m_root, key, path);
     store();
     DEBUG_ASSERT_INVARIANTS;
@@ -389,11 +389,11 @@ void BPTreeStorage::load()
 {
     if (m_blockManager->isRootInitialized()) {
         uint8_t *root_ptr = m_blockManager->getRootBlock();
-        m_root = makeNodeFromData(root_ptr, 0);
+        m_root = makeNodeFromData(root_ptr, m_blockManager->getRootOffset());
     }
     else {
         m_root = std::make_shared<BTreeNode>();
-        m_root->offset = 0;
+        m_root->offset = m_blockManager->getRootOffset();
         m_root->is_leaf = true;
     }
 }
@@ -457,10 +457,11 @@ void BPTreeStorage::storeSubtree(BTreeNodePtr node)
 {
     uint8_t *node_ptr = nullptr;
     if (node->offset != BTreeNode::NULL_OFFSET) {
-        node_ptr = m_blockManager->getTreeNodeBlock(node->offset);
+        node_ptr = m_blockManager->getBlockPointer(node->offset);
     }
     else {
         node_ptr = m_blockManager->getFreeTreeNodeBlock();
+        node->offset = m_blockManager->getOffset(node_ptr);
     }
     node_ptr[IS_LEAF_OFFSET] = static_cast<uint8_t>(node->is_leaf);
     node_ptr[DATA_COUNT_OFFSET] = static_cast<uint8_t>(node->data_vector.size());
@@ -543,7 +544,7 @@ void BPTreeStorage::addData(uint64_t key, uint64_t path_off, uint64_t data, bool
         auto new_node = std::make_shared<BTreeNode>();
         std::swap(*m_root, *new_node);
         m_root->is_leaf = false;
-        m_root->offset = 0;
+        m_root->offset = m_blockManager->getRootOffset();
         new_node->offset = BTreeNode::NULL_OFFSET;
         auto sibling = makeSibling(new_node);
 
@@ -559,7 +560,7 @@ void BPTreeStorage::addData(uint64_t key, uint64_t path_off, uint64_t data, bool
 
 bool BPTreeStorage::isExist(const std::string &path) const
 {
-    auto key = hash(path);
+    auto key = Utils::hash(path);
     BTreeNodePtr node = getChildWithKey(m_root, key);
     if (!node)
         return false;

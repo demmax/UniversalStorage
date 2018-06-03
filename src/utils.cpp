@@ -2,23 +2,18 @@
 // Created by maxon on 02.06.18.
 //
 
-#ifndef UNIVERSALSTORAGE_UTILS_H
-#define UNIVERSALSTORAGE_UTILS_H
+#include "utils.h"
 
-#include <string>
-#include <vector>
+using namespace UniversalStorage;
 
-
-namespace UniversalStorage {
-
-
-uint64_t hash(const std::string &str)
+uint64_t Utils::hash(const std::string &str)
 {
     std::hash<std::string> hash_fn;
     return hash_fn(str);
 }
 
-uint64_t packVector(const std::vector<uint8_t> &vec)
+
+uint64_t Utils::packVector(const std::vector<uint8_t> &vec)
 {
     uint64_t packed = 0;
     for (auto i = 0u; i < vec.size(); ++i) {
@@ -27,7 +22,8 @@ uint64_t packVector(const std::vector<uint8_t> &vec)
     return packed;
 }
 
-std::vector<uint8_t> unpackValue(uint64_t data)
+
+std::vector<uint8_t> Utils::unpackValue(uint64_t data)
 {
     std::vector<uint8_t> result;
     result.reserve(8);
@@ -36,8 +32,3 @@ std::vector<uint8_t> unpackValue(uint64_t data)
     }
     return result;
 }
-
-
-}
-
-#endif //UNIVERSALSTORAGE_UTILS_H

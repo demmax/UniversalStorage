@@ -8,7 +8,9 @@ set(SOURCES
         PathViewTest.cpp
         NaiveStorageTest.cpp
         LRUCachingProxyStorageTest.cpp
-        BTreeTest.cpp)
+        BTreeTest.cpp
+        BlockManagerTest.cpp
+        )
 
 set(LIBS ${PROJECT_NAME} ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
 add_executable(${TestName} ${SOURCES} ${MOCKS})

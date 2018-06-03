@@ -60,9 +60,6 @@ public:
     void removeValue(const std::string &path) override;
     bool isExist(const std::string &path) const override;
 
-    void load();
-    void store();
-
     template <typename T>
     void traverse(T &&func)
     {
@@ -87,6 +84,8 @@ protected:
     DataRecord getData(const std::any &var) const;
 
     // Load/storing data
+    void load();
+    void store();
     void storeSubtree(BTreeNodePtr node);
     BTreeNodePtr makeNodeFromData(uint8_t *base, uint64_t offset);
 
@@ -109,7 +108,7 @@ protected:
     BTreeNodePtr m_root;
     IBlockManagerPtr m_blockManager;
 
-    static constexpr uint8_t MAX_LOAD_FACTOR = 100;
+    static constexpr uint8_t MAX_LOAD_FACTOR = 80;
     static constexpr uint8_t MIN_LOAD_FACTOR = MAX_LOAD_FACTOR / 2;
 
     static constexpr uint64_t IS_LEAF_OFFSET = 0;
@@ -117,7 +116,7 @@ protected:
     static constexpr uint64_t RIGHT_SIBLING_OFFSET = 9;
     static constexpr uint64_t DATA_COUNT_OFFSET = 17;
     static constexpr uint64_t DATA_OFFSET = 18;
-    static constexpr uint8_t  MAX_CHILD_COUNT = 81;
+    static constexpr uint8_t  MAX_CHILD_COUNT = MAX_LOAD_FACTOR;
     static constexpr uint8_t  KEY_SIZE = 8;
     static constexpr uint8_t  DATA_SIZE = 8;
     static constexpr uint8_t  PATH_OFFSET_SIZE = 8;
@@ -126,6 +125,7 @@ protected:
     static constexpr uint64_t MAX_NODE_SIZE = DATA_OFFSET + (MAX_CHILD_COUNT * DATA_ITEM_SIZE);
 
     static_assert(MAX_NODE_SIZE <= IBlockManager::TREE_NODE_BLOCK_SIZE);
+    static_assert(MAX_LOAD_FACTOR <= IBlockManager::TREE_NODE_BLOCK_SIZE);
 };
 
 }

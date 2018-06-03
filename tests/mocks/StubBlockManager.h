@@ -12,7 +12,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <queue>
 #include "IBlockManager.h"
-#include "utils.hpp"
+#include "utils.h"
 
 class StubBlockManager : public UniversalStorage::IBlockManager
 {
@@ -31,13 +31,20 @@ public:
     {
     }
 
+
+    uint64_t getRootOffset() const override
+    {
+        return 0;
+    }
+
+
     uint8_t *getRootBlock() override
     {
         return rootBlock.get();
     }
 
 
-    uint8_t *getTreeNodeBlock(uint64_t offset) override
+    uint8_t *getBlockPointer(uint64_t offset) override
     {
         if (!offset)
             return getRootBlock();
@@ -54,15 +61,20 @@ public:
         return nodesMap[offset].data();
     }
 
+    virtual uint8_t *getFreeBlock() override
+    {
+        return nullptr;
+    }
 
-    uint64_t getOffset(uint8_t *address) override
+
+    uint64_t getOffset(uint8_t *address) const override
     {
         return reinterpret_cast<uint64_t >(address);
     }
 
-    void freeTreeNodeBlock(uint8_t *address) override
+    void freeTreeNodeBlock(uint64_t offset) override
     {
-        nodesMap.erase(getOffset(address));
+        nodesMap.erase(offset);
     }
 
 
@@ -122,6 +134,7 @@ public:
         }
         return false;
     }
+
 };
 
 

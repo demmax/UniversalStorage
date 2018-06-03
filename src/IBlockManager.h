@@ -20,9 +20,11 @@ public:
 
 
     virtual uint8_t *getRootBlock() = 0;
-    virtual uint8_t *getTreeNodeBlock(uint64_t offset) = 0;
     virtual uint8_t *getFreeTreeNodeBlock() = 0;
-    virtual void freeTreeNodeBlock(uint8_t *address) = 0;
+    virtual void freeTreeNodeBlock(uint64_t offset) = 0;
+
+    virtual uint8_t *getBlockPointer(uint64_t offset) = 0;
+    virtual uint8_t *getFreeBlock() = 0;
 
     virtual uint64_t storeData(const std::vector<uint8_t> &data, uint64_t offset) = 0;
     virtual uint64_t storeNewData(const std::vector<uint8_t> &data) = 0;
@@ -33,8 +35,9 @@ public:
     virtual std::string getPathFromBlock(uint64_t offset) = 0;
     virtual std::vector<uint8_t> getDataFromBlock(uint64_t offset) = 0;
 
+    virtual uint64_t getRootOffset() const = 0;
     virtual bool isRootInitialized() const = 0;
-    virtual uint64_t getOffset(uint8_t *address) = 0;
+    virtual uint64_t getOffset(uint8_t *address) const = 0;
 
     virtual ~IBlockManager() = default;
 };
