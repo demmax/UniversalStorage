@@ -33,8 +33,19 @@ public:
     bool isRootInitialized() const override;
     uint64_t getOffset(uint8_t *address) override;
 
+
 protected:
+    int getFreeBlockIndex() const;
+
     boost::iostreams::mapped_file m_mappedFile;
+    uint64_t m_firstFreeBlockOffset;
+    uint32_t m_version;
+    uint8_t *p_rootNodeBlock;
+    uint8_t *p_firstDataBlock; //!< after header
+
+    static constexpr size_t HEADER_SIZE = 4 + 8 + 8; // version + reserved place + first free block offset
+    static constexpr size_t BITMAP_SIZE = DATA_BLOCK_SIZE;
+    static constexpr size_t SECTOR_DATA_SIZE = BITMAP_SIZE + (BITMAP_SIZE * 8  * DATA_BLOCK_SIZE); // bitmap + blocks
 };
 
 }

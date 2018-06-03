@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "IBlockManager.h"
+#include "IStorage.h"
 #include <memory>
 #include <any>
 
@@ -29,7 +30,7 @@ struct BTreeNode;
 struct DataItem
 {
     uint64_t key;
-    std::any data;
+    std::any data; //!< DataRecords or BTreeNodePtr
     DataItem(uint64_t k, std::any v) : key(k), data(std::move(v)) {}
     bool operator<(const DataItem &o) const { return key < o.key; }
     bool operator<(uint64_t k) const { return key < k; }
@@ -48,15 +49,16 @@ struct BTreeNode
 
 
 
-class BPTree
+class BPTreeStorage : public IStorage
 {
 public:
-    BPTree(IBlockManagerPtr blockManager);
-    ~BPTree();
+    BPTreeStorage(IBlockManagerPtr blockManager);
+    ~BPTreeStorage();
 
-    void setValue(const std::string &path, const std::vector<uint8_t> &data);
-    std::vector<uint8_t> getValue(const std::string &path) const;
-    void removeKey(const std::string &path);
+    void setValue(const std::string &path, const std::vector<uint8_t> &data) override;
+    std::vector<uint8_t> getValue(const std::string &path) const override;
+    void removeValue(const std::string &path) override;
+    bool isExist(const std::string &path) const override;
 
     void load();
     void store();
@@ -115,13 +117,15 @@ protected:
     static constexpr uint64_t RIGHT_SIBLING_OFFSET = 9;
     static constexpr uint64_t DATA_COUNT_OFFSET = 17;
     static constexpr uint64_t DATA_OFFSET = 18;
-    static constexpr uint8_t  MAX_CHILD_COUNT = 100;
+    static constexpr uint8_t  MAX_CHILD_COUNT = 81;
     static constexpr uint8_t  KEY_SIZE = 8;
     static constexpr uint8_t  DATA_SIZE = 8;
     static constexpr uint8_t  PATH_OFFSET_SIZE = 8;
     static constexpr uint8_t  IS_DATA_FLAG_SIZE = 1;
     static constexpr uint8_t  DATA_ITEM_SIZE = KEY_SIZE + DATA_SIZE + PATH_OFFSET_SIZE + IS_DATA_FLAG_SIZE;
     static constexpr uint64_t MAX_NODE_SIZE = DATA_OFFSET + (MAX_CHILD_COUNT * DATA_ITEM_SIZE);
+
+    static_assert(MAX_NODE_SIZE <= IBlockManager::TREE_NODE_BLOCK_SIZE);
 };
 
 }

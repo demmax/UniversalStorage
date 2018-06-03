@@ -2,7 +2,7 @@
 // Created by maxon on 26.05.18.
 //
 
-#include "BPTree.h"
+#include "BPTreeStorage.h"
 #include "exceptions.h"
 #include "utils.hpp"
 #include <cstring>
@@ -21,18 +21,18 @@ using namespace UniversalStorage;
 
 
 
-BPTree::BPTree(IBlockManagerPtr blockManager) : m_blockManager(blockManager)
+BPTreeStorage::BPTreeStorage(IBlockManagerPtr blockManager) : m_blockManager(blockManager)
 {
     load();
 }
 
 
-BPTree::~BPTree()
+BPTreeStorage::~BPTreeStorage()
 {
 }
 
 
-void BPTree::setValue(const std::string &path, const std::vector<uint8_t> &data)
+void BPTreeStorage::setValue(const std::string &path, const std::vector<uint8_t> &data)
 {
     uint64_t path_hash = hash(path);
     bool is_data = false;
@@ -55,7 +55,7 @@ void BPTree::setValue(const std::string &path, const std::vector<uint8_t> &data)
 }
 
 
-bool BPTree::internalAddData(BTreeNodePtr node, uint64_t key, DataRecord data)
+bool BPTreeStorage::internalAddData(BTreeNodePtr node, uint64_t key, DataRecord data)
 {
     if (node->is_leaf) {
         insertData(node, key, data);
@@ -86,7 +86,7 @@ bool BPTree::internalAddData(BTreeNodePtr node, uint64_t key, DataRecord data)
 
 
 
-void BPTree::insertData(BTreeNodePtr node, uint64_t key, const std::any &data)
+void BPTreeStorage::insertData(BTreeNodePtr node, uint64_t key, const std::any &data)
 {
     node->data_vector.insert(
             std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key),
@@ -95,7 +95,7 @@ void BPTree::insertData(BTreeNodePtr node, uint64_t key, const std::any &data)
 }
 
 
-BTreeNodePtr BPTree::makeSibling(BTreeNodePtr node)
+BTreeNodePtr BPTreeStorage::makeSibling(BTreeNodePtr node)
 {
     auto sibling = std::make_shared<BTreeNode>();
     sibling->is_leaf = node->is_leaf;
@@ -116,7 +116,7 @@ BTreeNodePtr BPTree::makeSibling(BTreeNodePtr node)
 }
 
 
-std::vector<uint8_t> BPTree::getValue(const std::string &path) const
+std::vector<uint8_t> BPTreeStorage::getValue(const std::string &path) const
 {
     uint64_t key = hash(path);
     BTreeNodePtr node = getChildWithKey(m_root, key);
@@ -151,7 +151,7 @@ std::vector<uint8_t> BPTree::getValue(const std::string &path) const
     throw NoSuchPathException(path.c_str());
 }
 
-bool BPTree::updateValue(uint64_t key, const std::string &path, uint64_t data, bool is_data)
+bool BPTreeStorage::updateValue(uint64_t key, const std::string &path, uint64_t data, bool is_data)
 {
     BTreeNodePtr node = getChildWithKey(m_root, key);
     if (!node)
@@ -184,7 +184,7 @@ bool BPTree::updateValue(uint64_t key, const std::string &path, uint64_t data, b
     return false;
 }
 
-void BPTree::removeKey(const std::string &path)
+void BPTreeStorage::removeValue(const std::string &path)
 {
     auto key = hash(path);
     internalRemoveData(m_root, key, path);
@@ -193,7 +193,7 @@ void BPTree::removeKey(const std::string &path)
 }
 
 
-BTreeNodePtr BPTree::getChildWithKey(BTreeNodePtr node, uint64_t key) const
+BTreeNodePtr BPTreeStorage::getChildWithKey(BTreeNodePtr node, uint64_t key) const
 {
     auto it = std::lower_bound(node->data_vector.begin(), node->data_vector.end(), key);
     if (it == node->data_vector.end())
@@ -207,7 +207,7 @@ BTreeNodePtr BPTree::getChildWithKey(BTreeNodePtr node, uint64_t key) const
 }
 
 
-BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key, const std::string &path)
+BPTreeStorage::RemoveStatus BPTreeStorage::internalRemoveData(BTreeNodePtr node, uint64_t key, const std::string &path)
 {
     if (node->is_leaf) {
         auto del_it = std::find_if(node->data_vector.begin(), node->data_vector.end(),
@@ -332,7 +332,7 @@ BPTree::RemoveStatus BPTree::internalRemoveData(BTreeNodePtr node, uint64_t key,
 }
 
 
-void BPTree::assertInvariants(BTreeNodePtr node)
+void BPTreeStorage::assertInvariants(BTreeNodePtr node)
 {
     if (node != m_root) {
         assert(node->data_vector.size() >= MIN_LOAD_FACTOR && node->data_vector.size() <= MAX_LOAD_FACTOR);
@@ -373,19 +373,19 @@ void BPTree::assertInvariants(BTreeNodePtr node)
 }
 
 
-DataRecord BPTree::getData(const std::any &var) const
+DataRecord BPTreeStorage::getData(const std::any &var) const
 {
     return std::any_cast<DataRecord>(var);
 }
 
 
-BTreeNodePtr BPTree::getPtr(const std::any &var) const
+BTreeNodePtr BPTreeStorage::getPtr(const std::any &var) const
 {
     return std::any_cast<BTreeNodePtr>(var);
 }
 
 
-void BPTree::load()
+void BPTreeStorage::load()
 {
     if (m_blockManager->isRootInitialized()) {
         uint8_t *root_ptr = m_blockManager->getRootBlock();
@@ -399,7 +399,7 @@ void BPTree::load()
 }
 
 
-BTreeNodePtr BPTree::makeNodeFromData(uint8_t *base, uint64_t offset)
+BTreeNodePtr BPTreeStorage::makeNodeFromData(uint8_t *base, uint64_t offset)
 {
     auto node = std::make_shared<BTreeNode>();
 
@@ -447,13 +447,13 @@ BTreeNodePtr BPTree::makeNodeFromData(uint8_t *base, uint64_t offset)
 }
 
 
-void BPTree::store()
+void BPTreeStorage::store()
 {
     storeSubtree(m_root);
 }
 
 
-void BPTree::storeSubtree(BTreeNodePtr node)
+void BPTreeStorage::storeSubtree(BTreeNodePtr node)
 {
     uint8_t *node_ptr = nullptr;
     if (node->offset != BTreeNode::NULL_OFFSET) {
@@ -534,7 +534,7 @@ void BPTree::storeSubtree(BTreeNodePtr node)
 }
 
 
-void BPTree::addData(uint64_t key, uint64_t path_off, uint64_t data, bool is_data)
+void BPTreeStorage::addData(uint64_t key, uint64_t path_off, uint64_t data, bool is_data)
 {
     DataRecord real_data{.data = data, .path_offset = path_off, .is_data = is_data};
     bool need_check = internalAddData(m_root, key, real_data);
@@ -554,4 +554,36 @@ void BPTree::addData(uint64_t key, uint64_t path_off, uint64_t data, bool is_dat
         new_node->right_sibling = sibling;
         sibling->left_sibling = new_node;
     }
+}
+
+
+bool BPTreeStorage::isExist(const std::string &path) const
+{
+    auto key = hash(path);
+    BTreeNodePtr node = getChildWithKey(m_root, key);
+    if (!node)
+        return false;
+
+    auto it = std::find_if(node->data_vector.begin(), node->data_vector.end(), [&](auto data) { return data.key == key; });
+    if (it == node->data_vector.end())
+        return false;
+
+    while ((*it).key == key) {
+        // Check path
+        DataRecord data_item = getData((*it).data);
+        if (m_blockManager->getPathFromBlock(data_item.path_offset) == path) {
+            return true;
+        }
+
+        it = std::next(it);
+        if (it == node->data_vector.end()) { // Go to sibling
+            if (!node->right_sibling)
+                return false;
+
+            node = node->right_sibling;
+            it = node->data_vector.begin();
+        }
+    }
+
+    return false;
 }

@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <exceptions.h>
-#include "BPTree.h"
+#include "BPTreeStorage.h"
 #include "utils.hpp"
 #include "../mocks/StubBlockManager.h"
 
@@ -20,7 +20,7 @@ using namespace UniversalStorage;
 TEST(BTreeTest, GettingValuesTest)
 {
     auto blockManager = std::make_shared<StubBlockManager>();
-    BPTree tree(blockManager);
+    BPTreeStorage tree(blockManager);
 
     const int N = 10000;
     for (int i = 0; i < N; i++) {
@@ -36,7 +36,7 @@ TEST(BTreeTest, GettingValuesTest)
 TEST(BTreeTest, GettingValuesReversedTest)
 {
     auto blockManager = std::make_shared<StubBlockManager>();
-    BPTree tree(blockManager);
+    BPTreeStorage tree(blockManager);
 
     const int N = 10000;
     for (int i = 0; i < N; i++) {
@@ -52,14 +52,14 @@ TEST(BTreeTest, GettingValuesReversedTest)
 TEST(BTreeTest, OneElementRemovingTest)
 {
     auto blockManager = std::make_shared<StubBlockManager>();
-    BPTree tree(blockManager);
+    BPTreeStorage tree(blockManager);
 
     const int N = 10000;
     for (uint64_t i = 0; i < N; i++) {
         tree.setValue(std::to_string(i), unpackValue(i));
     }
 
-    tree.removeKey(std::to_string(N / 2));
+    tree.removeValue(std::to_string(N / 2));
 
     for (int i = 0; i < N / 2; i++) {
         auto val = tree.getValue(std::to_string(i));
@@ -77,7 +77,7 @@ TEST(BTreeTest, OneElementRemovingTest)
 TEST(BTreeTest, AllRemovingTest)
 {
     auto blockManager = std::make_shared<StubBlockManager>();
-    BPTree tree(blockManager);
+    BPTreeStorage tree(blockManager);
     int key = 0;
     int val = 1;
 
@@ -88,7 +88,7 @@ TEST(BTreeTest, AllRemovingTest)
     }
 
     for (uint64_t i = 0; i < N - 1; i++) {
-        tree.removeKey(std::to_string(i));
+        tree.removeValue(std::to_string(i));
     }
 
     for (int i = 0; i < N - 1; i++) {
@@ -100,7 +100,7 @@ TEST(BTreeTest, AllRemovingTest)
 TEST(BTreeTest, MultiKeyTest)
 {
     auto blockManager = std::make_shared<StubBlockManager>();
-    BPTree tree(blockManager);
+    BPTreeStorage tree(blockManager);
     const int N = 1000;
     for (int i = 0; i < N; i++) {
         tree.setValue(std::to_string(i), unpackValue(i));
@@ -113,7 +113,7 @@ TEST(BTreeTest, MultiKeyTest)
 TEST(BTreeTest, MultiKeyRemoveTest)
 {
     auto blockManager = std::make_shared<StubBlockManager>();
-    BPTree tree(blockManager);
+    BPTreeStorage tree(blockManager);
     const int N = 10000;
     for (int i = 0; i < N; i++) {
         tree.setValue(std::to_string(i), unpackValue(i));
@@ -124,7 +124,7 @@ TEST(BTreeTest, MultiKeyRemoveTest)
     auto result = tree.getValue(off_str);
     EXPECT_EQ(result, unpackValue(off));
 
-    tree.removeKey(off_str);
+    tree.removeValue(off_str);
     EXPECT_THROW(tree.getValue(off_str), NoSuchPathException);
 }
 
@@ -132,12 +132,12 @@ TEST(BTreeTest, RootStoreLoadTest)
 {
     auto blockManager = std::make_shared<StubBlockManager>();
     {
-        BPTree tree(blockManager);
+        BPTreeStorage tree(blockManager);
         tree.setValue("/", unpackValue(0xDEADBEAF));
     }
 
     {
-        BPTree tree(blockManager);
+        BPTreeStorage tree(blockManager);
         auto val = tree.getValue("/");
         EXPECT_EQ(val, unpackValue(0xDEADBEAF));
     }
@@ -150,14 +150,14 @@ TEST(BTreeTest, SimpleStoreLoadTest)
     const int N = 10;
 
     {
-        BPTree tree(blockManager);
+        BPTreeStorage tree(blockManager);
         for (int i = 0; i < N; i++) {
             tree.setValue(std::to_string(i), unpackValue(i));
         }
     }
 
     {
-        BPTree tree(blockManager);
+        BPTreeStorage tree(blockManager);
         for (int i = 0; i < N; i++) {
             auto val = tree.getValue(std::to_string(i));
             EXPECT_EQ(val, unpackValue(i));

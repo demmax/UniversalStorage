@@ -14,6 +14,11 @@ namespace UniversalStorage {
 class IBlockManager
 {
 public:
+    static constexpr size_t TREE_NODE_BLOCK_SIZE = 2048;
+    static constexpr size_t DATA_BLOCK_SIZE = 1024;
+    static constexpr size_t DATA_BLOCKS_IN_TREE_NODE = TREE_NODE_BLOCK_SIZE / DATA_BLOCK_SIZE;
+
+
     virtual uint8_t *getRootBlock() = 0;
     virtual uint8_t *getTreeNodeBlock(uint64_t offset) = 0;
     virtual uint8_t *getFreeTreeNodeBlock() = 0;

@@ -9,19 +9,24 @@
 
 uint8_t *UniversalStorage::MappedFileBlockManager::getRootBlock()
 {
-    return nullptr;
+    return p_rootNodeBlock;
 }
 
 
 uint8_t *UniversalStorage::MappedFileBlockManager::getTreeNodeBlock(uint64_t offset)
 {
-    return nullptr;
+    return p_rootNodeBlock + offset;
 }
 
 
 uint8_t *UniversalStorage::MappedFileBlockManager::getFreeTreeNodeBlock()
 {
-    return nullptr;
+//    if (m_mappedFile.size() <= HEADER_SIZE + m_firstFreeBlockOffset * DATA_BLOCK_SIZE) {
+//        m_mappedFile.resize(m_mappedFile.size() + SECTOR_DATA_SIZE);
+//    }
+
+    // Aquire contiguous blocks for tree node
+//    int
 }
 
 
@@ -87,13 +92,23 @@ uint64_t UniversalStorage::MappedFileBlockManager::getOffset(uint8_t *address)
 
 UniversalStorage::MappedFileBlockManager::MappedFileBlockManager(const std::string &file_name)
 {
-    if (!boost::filesystem::exists(file_name) || boost::filesystem::file_size(file_name) < 4096) {
+    static const size_t INITIAL_SIZE = HEADER_SIZE + BITMAP_SIZE + TREE_NODE_BLOCK_SIZE;
+    if (!boost::filesystem::exists(file_name) || boost::filesystem::file_size(file_name) < INITIAL_SIZE) {
         boost::filesystem::ofstream of(file_name);
-        boost::filesystem::resize_file(file_name, 4096);
+        boost::filesystem::resize_file(file_name, INITIAL_SIZE);
     }
 
     m_mappedFile = boost::iostreams::mapped_file(file_name, boost::iostreams::mapped_file::readwrite);
-    m_mappedFile.resize(2048);
+    p_rootNodeBlock = (uint8_t*)m_mappedFile.data() + HEADER_SIZE + BITMAP_SIZE;
+
+
+//    m_mappedFile.resize(2048);
 //    std::memcpy(m_mappedFile.data(), rootBlock.get(), 4096);
-    m_mappedFile.close();
+//    m_mappedFile.close();
+}
+
+
+int UniversalStorage::MappedFileBlockManager::getFreeBlockIndex() const
+{
+    return 0;
 }
