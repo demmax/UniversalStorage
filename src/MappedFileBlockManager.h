@@ -50,7 +50,9 @@ protected:
     void aquireBlock(uint64_t offset);
     uint64_t getSectorNumber(uint64_t offset) const;
     uint64_t getBlockNumber(uint64_t offset) const;
+    void setNextBlock(uint64_t offset, uint64_t next_offset);
     int getFreeBlockIndex(uint8_t *bitmap, uint64_t start_index = 0) const;
+    void internalFreeBlock(uint64_t offset, bool continued);
 
     void resizeFile(uint64_t new_size);
 

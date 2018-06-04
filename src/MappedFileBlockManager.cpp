@@ -36,7 +36,7 @@ uint8_t *UniversalStorage::MappedFileBlockManager::getFreeTreeNodeBlock()
 void UniversalStorage::MappedFileBlockManager::freeTreeNodeBlock(uint64_t offset)
 {
     for (auto i = 0u; i < DATA_BLOCKS_IN_TREE_NODE; i++)
-        freeBlock(offset + i * DATA_BLOCK_SIZE);
+        internalFreeBlock(offset, false);
 }
 
 
@@ -69,7 +69,13 @@ uint64_t UniversalStorage::MappedFileBlockManager::storeNewPath(const std::strin
 
 void UniversalStorage::MappedFileBlockManager::freeBlock(uint64_t offset)
 {
-    while (offset) {
+    internalFreeBlock(offset, true);
+}
+
+
+void MappedFileBlockManager::internalFreeBlock(uint64_t offset, bool continued)
+{
+    while (continued && offset) {
         uint64_t sector_number = getSectorNumber(offset);
         uint64_t block_number = getBlockNumber(offset) - 1;
         uint16_t byte_number = block_number / 8;
@@ -180,7 +186,6 @@ uint64_t UniversalStorage::MappedFileBlockManager::findFreeBlockOffset(uint64_t 
                 uint8_t mask = 1 << bit;
                 if ( (byte & mask) != mask ) {
                     auto new_off = sector * SECTOR_DATA_SIZE + BITMAP_SIZE + (DATA_BLOCK_SIZE * (bi * 8 + bit));
-//                    if (new_off >= min_offset)
                         return new_off;
                 }
             }
@@ -213,6 +218,13 @@ uint64_t UniversalStorage::MappedFileBlockManager::findContiguousFreeBlocks(uint
     }
 
     blocksCount += 2;
+    uint64_t offset = first_free_block;
+    for (int i = 0; i < count - 1; i++) {
+        setNextBlock(offset, offset + DATA_BLOCK_SIZE);
+        offset += DATA_BLOCK_SIZE;
+    }
+    setNextBlock(offset, 0);
+
     return first_free_block;
 }
 
@@ -326,4 +338,12 @@ void MappedFileBlockManager::resizeFile(uint64_t new_size)
     m_mappedFile.resize(new_size);
     p_firstDataBlock = (uint8_t*)m_mappedFile.data() + HEADER_SIZE;
     p_rootNodeBlock = p_firstDataBlock + BITMAP_SIZE;
+}
+
+
+void MappedFileBlockManager::setNextBlock(uint64_t offset, uint64_t next_off)
+{
+    uint8_t *pointer = getBlockPointer(offset);
+    auto offset_ptr = reinterpret_cast<uint64_t*>(pointer + PLAIN_BLOCK_DATA_SIZE + DATA_LENGTH_SIZE);
+    *offset_ptr = boost::endian::native_to_little(next_off);
 }
