@@ -28,13 +28,23 @@ int main(int argc, char **argv)
     auto start = steady_clock::now();
     for (size_t i = 0u; i < dataCount; i++) {
         auto path = "/" + std::to_string(i);
-        accessor->setValue(path, path);
+        accessor->setValue(path, std::to_string(dataCount - i));
     }
     auto end = steady_clock::now();
     auto d = duration_cast<seconds>( end - start ).count();
-    cout << "Inserting " + to_string(dataCount) << " values: " << d << " seconds" << endl;
-    cout << "average: " << duration_cast<milliseconds>(end - start).count() / dataCount << " ms" << endl << endl;
+    cout << "inserting " + to_string(dataCount) << " values: " << d << " seconds" << endl;
+    cout << "average: " << duration_cast<microseconds>(end - start).count() / dataCount << " us" << endl << endl;
 
+    cout << "Start updating test..." << endl;
+    start = steady_clock::now();
+    for (size_t i = 0u; i < dataCount; i++) {
+        auto path = "/" + std::to_string(i);
+        accessor->setValue(path, path);
+    }
+    end = steady_clock::now();
+    d = duration_cast<seconds>( end - start ).count();
+    cout << "updating " + to_string(dataCount) << " values: " << d << " seconds" << endl;
+    cout << "average: " << duration_cast<microseconds>(end - start).count() / dataCount << " us" << endl << endl;
 
 
     cout << "Start getting test..." << endl;
@@ -45,8 +55,8 @@ int main(int argc, char **argv)
     }
     end = steady_clock::now();
     d = duration_cast<seconds>( end - start ).count();
-    cout << "Getting " + to_string(dataCount) << " values: " << d << " seconds" << endl;
-    cout << "average: " << duration_cast<milliseconds>(end - start).count() / dataCount  << " ms" << endl << endl;
+    cout << "getting " + to_string(dataCount) << " values: " << d << " seconds" << endl;
+    cout << "average: " << duration_cast<microseconds>(end - start).count() / dataCount  << " us" << endl << endl;
 
 
 
@@ -58,9 +68,9 @@ int main(int argc, char **argv)
     }
     end = steady_clock::now();
     d = duration_cast<seconds>( end - start ).count();
-    cout << "Removing " + to_string(dataCount) << " values: " << d << " seconds" << endl;
-    cout << "average: " << duration_cast<milliseconds>(end - start).count() / dataCount  << " ms" << endl << endl;
+    cout << "removing " + to_string(dataCount) << " values: " << d << " seconds" << endl;
+    cout << "average: " << duration_cast<microseconds>(end - start).count() / dataCount  << " us" << endl << endl;
 
-    std::remove(fileName.c_str());
+//    std::remove(fileName.c_str());
     return 0;
 }

@@ -10,6 +10,35 @@
 
 using namespace UniversalStorage;
 
+UniversalStorage::MappedFileBlockManager::MappedFileBlockManager(const std::string &file_name)
+{
+    static const size_t INITIAL_SIZE = HEADER_SIZE + SECTOR_DATA_SIZE;
+    if (!boost::filesystem::exists(file_name) || boost::filesystem::file_size(file_name) < INITIAL_SIZE) {
+        boost::filesystem::ofstream of(file_name);
+        boost::filesystem::resize_file(file_name, INITIAL_SIZE);
+        m_rootInitialized = false;
+    }
+
+    m_mappedFile = boost::iostreams::mapped_file(file_name, boost::iostreams::mapped_file::readwrite);
+    p_firstDataBlock = (uint8_t*)m_mappedFile.data() + HEADER_SIZE;
+    p_rootNodeBlock = p_firstDataBlock + BITMAP_SIZE;
+
+    auto version_ptr = reinterpret_cast<uint32_t*>(m_mappedFile.data());
+    auto first_free_offset_ptr = reinterpret_cast<uint64_t *>((uint8_t *) m_mappedFile.data() + HEADER_SIZE - 8);
+    if (m_rootInitialized) {
+        m_firstFreeBlockOffset = boost::endian::little_to_native(*first_free_offset_ptr);
+        m_version = boost::endian::little_to_native(*version_ptr);
+    }
+    else {
+        m_version = 1;
+        *version_ptr = m_version;
+        m_firstFreeBlockOffset = getOffset(p_rootNodeBlock + TREE_NODE_BLOCK_SIZE);
+        *first_free_offset_ptr = boost::endian::little_to_native(m_firstFreeBlockOffset);
+        aquireBlock(getOffset(p_firstDataBlock + BITMAP_SIZE));
+        aquireBlock(getOffset(p_firstDataBlock + BITMAP_SIZE + DATA_BLOCK_SIZE));
+    }
+}
+
 
 uint8_t *UniversalStorage::MappedFileBlockManager::getRootBlock()
 {
@@ -81,7 +110,6 @@ void MappedFileBlockManager::internalFreeBlock(uint64_t offset, bool continued)
         uint16_t byte_number = block_number / 8;
         uint8_t bit_number = block_number % 8;
 
-        size_t fs = m_mappedFile.size();
         uint8_t *sector_ptr = getBlockPointer(sector_number * SECTOR_DATA_SIZE);
         sector_ptr[byte_number] &= ~(1 << bit_number);
 
@@ -132,36 +160,6 @@ bool UniversalStorage::MappedFileBlockManager::isRootInitialized() const
 uint64_t UniversalStorage::MappedFileBlockManager::getOffset(uint8_t *address) const
 {
     return static_cast<uint64_t>(address - p_firstDataBlock);
-}
-
-
-UniversalStorage::MappedFileBlockManager::MappedFileBlockManager(const std::string &file_name)
-{
-    static const size_t INITIAL_SIZE = HEADER_SIZE + SECTOR_DATA_SIZE;
-    if (!boost::filesystem::exists(file_name) || boost::filesystem::file_size(file_name) < INITIAL_SIZE) {
-        boost::filesystem::ofstream of(file_name);
-        boost::filesystem::resize_file(file_name, INITIAL_SIZE);
-        m_rootInitialized = false;
-    }
-
-    m_mappedFile = boost::iostreams::mapped_file(file_name, boost::iostreams::mapped_file::readwrite);
-    p_firstDataBlock = (uint8_t*)m_mappedFile.data() + HEADER_SIZE;
-    p_rootNodeBlock = p_firstDataBlock + BITMAP_SIZE;
-
-    auto version_ptr = reinterpret_cast<uint32_t*>(m_mappedFile.data());
-    auto first_free_offset_ptr = reinterpret_cast<uint64_t *>((uint8_t *) m_mappedFile.data() + HEADER_SIZE - 8);
-    if (m_rootInitialized) {
-        m_firstFreeBlockOffset = boost::endian::little_to_native(*first_free_offset_ptr);
-        m_version = boost::endian::little_to_native(*version_ptr);
-    }
-    else {
-        m_version = 1;
-        *version_ptr = m_version;
-        m_firstFreeBlockOffset = getOffset(p_rootNodeBlock + TREE_NODE_BLOCK_SIZE);
-        *first_free_offset_ptr = boost::endian::little_to_native(m_firstFreeBlockOffset);
-        aquireBlock(getOffset(p_firstDataBlock + BITMAP_SIZE));
-        aquireBlock(getOffset(p_firstDataBlock + BITMAP_SIZE + DATA_BLOCK_SIZE));
-    }
 }
 
 
