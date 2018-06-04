@@ -282,6 +282,7 @@ BPTreeStorage::RemoveStatus BPTreeStorage::internalRemoveData(BTreeNodePtr node,
                 throw StorageException("Something goes completely wrong");
 
             std::swap(*node, *child); // Move child up
+            m_blockManager->freeTreeNodeBlock(child->offset);
             return REMOVED;
         }
 
@@ -323,6 +324,7 @@ BPTreeStorage::RemoveStatus BPTreeStorage::internalRemoveData(BTreeNodePtr node,
                     child->right_sibling->left_sibling = child;
             }
             (*child_it).key = child->data_vector.back().key;
+            m_blockManager->freeTreeNodeBlock(sibling->offset);
             node->data_vector.erase(sibling_it);
             return REMOVED;
         }

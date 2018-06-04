@@ -18,10 +18,25 @@ using namespace UniversalStorage;
 
 
 
+const std::string fileName = "data";
+struct MappedManager
+{
+    static constexpr const char* fileName = "data";
+    std::shared_ptr<MappedFileBlockManager> blockManager;
+    MappedManager() {
+        blockManager = std::make_shared<MappedFileBlockManager>(fileName);
+    }
+
+    ~MappedManager() {
+        std::remove(fileName);
+    }
+};
+
 TEST(BTreeTest, GettingValuesTest)
 {
 //    auto blockManager = std::make_shared<StubBlockManager>();
-    auto blockManager = std::make_shared<MappedFileBlockManager>("data");
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
     BPTreeStorage tree(blockManager);
 
     const int N = 10000;
@@ -37,7 +52,9 @@ TEST(BTreeTest, GettingValuesTest)
 
 TEST(BTreeTest, GettingValuesReversedTest)
 {
-    auto blockManager = std::make_shared<StubBlockManager>();
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
+//    auto blockManager = std::make_shared<StubBlockManager>();
     BPTreeStorage tree(blockManager);
 
     const int N = 10000;
@@ -53,7 +70,8 @@ TEST(BTreeTest, GettingValuesReversedTest)
 
 TEST(BTreeTest, OneElementRemovingTest)
 {
-    auto blockManager = std::make_shared<StubBlockManager>();
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
     BPTreeStorage tree(blockManager);
 
     const int N = 10000;
@@ -78,7 +96,10 @@ TEST(BTreeTest, OneElementRemovingTest)
 
 TEST(BTreeTest, AllRemovingTest)
 {
-    auto blockManager = std::make_shared<StubBlockManager>();
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
+
+//    auto blockManager = std::make_shared<StubBlockManager>();
     BPTreeStorage tree(blockManager);
     int key = 0;
     int val = 1;
@@ -101,7 +122,9 @@ TEST(BTreeTest, AllRemovingTest)
 
 TEST(BTreeTest, MultiKeyTest)
 {
-    auto blockManager = std::make_shared<StubBlockManager>();
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
+//    auto blockManager = std::make_shared<StubBlockManager>();
     BPTreeStorage tree(blockManager);
     const int N = 1000;
     for (int i = 0; i < N; i++) {
@@ -114,7 +137,9 @@ TEST(BTreeTest, MultiKeyTest)
 
 TEST(BTreeTest, MultiKeyRemoveTest)
 {
-    auto blockManager = std::make_shared<StubBlockManager>();
+//    auto blockManager = std::make_shared<StubBlockManager>();
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
     BPTreeStorage tree(blockManager);
     const int N = 10000;
     for (int i = 0; i < N; i++) {
@@ -132,7 +157,9 @@ TEST(BTreeTest, MultiKeyRemoveTest)
 
 TEST(BTreeTest, RootStoreLoadTest)
 {
-    auto blockManager = std::make_shared<StubBlockManager>();
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
+//    auto blockManager = std::make_shared<StubBlockManager>();
     {
         BPTreeStorage tree(blockManager);
         tree.setValue("/", Utils::unpackValue(0xDEADBEAF));
@@ -148,7 +175,9 @@ TEST(BTreeTest, RootStoreLoadTest)
 
 TEST(BTreeTest, SimpleStoreLoadTest)
 {
-    auto blockManager = std::make_shared<StubBlockManager>();
+    MappedManager manager;
+    auto blockManager = manager.blockManager;
+//    auto blockManager = std::make_shared<StubBlockManager>();
     const int N = 10;
 
     {

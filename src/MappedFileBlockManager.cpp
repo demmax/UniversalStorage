@@ -70,20 +70,20 @@ uint64_t UniversalStorage::MappedFileBlockManager::storeNewPath(const std::strin
 void UniversalStorage::MappedFileBlockManager::freeBlock(uint64_t offset)
 {
     while (offset) {
-        uint64_t sector_off = offset / SECTOR_DATA_SIZE;
-        uint64_t block_off = offset % SECTOR_DATA_SIZE;
-        uint64_t block_number = block_off / DATA_BLOCK_SIZE;
+        uint64_t sector_number = getSectorNumber(offset);
+        uint64_t block_number = getBlockNumber(offset) - 1;
         uint16_t byte_number = block_number / 8;
         uint8_t bit_number = block_number % 8;
 
-        uint8_t *sector_ptr = getBlockPointer(sector_off * SECTOR_DATA_SIZE);
+        size_t fs = m_mappedFile.size();
+        uint8_t *sector_ptr = getBlockPointer(sector_number * SECTOR_DATA_SIZE);
         sector_ptr[byte_number] &= ~(1 << bit_number);
 
         if (offset < m_firstFreeBlockOffset)
             m_firstFreeBlockOffset = offset;
 
         uint8_t *block_ptr = getBlockPointer(offset);
-        auto next_block_ptr = reinterpret_cast<uint64_t *>(block_ptr + DATA_LENGTH_SIZE + DATA_BLOCK_SIZE);
+        auto next_block_ptr = reinterpret_cast<uint64_t *>(block_ptr + DATA_LENGTH_SIZE + PLAIN_BLOCK_DATA_SIZE);
         offset = boost::endian::little_to_native(*next_block_ptr);
     }
 }
